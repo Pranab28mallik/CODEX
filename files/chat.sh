@@ -25,7 +25,7 @@ dm='\033[1;93m▱▱▱▱▱▱\033[1;0m〄\033[1;93m▱▱▱▱▱▱\033[1;0
 
 
 URL="https://codex-chat-hew1.onrender.com"
-USERNAME_DIR="$HOME/.CODEX"
+USERNAME_DIR="$HOME/.DARK"
 USERNAME_FILE="$USERNAME_DIR/usernames.txt"
 random_number=$(( RANDOM % 2 ))
 
@@ -223,7 +223,7 @@ clear
         echo -e "${lm}"
         echo -e " $D"
         echo -e "  ${c}┏┓┓┏┏┓┏┳┓"
-        echo -e "  ${c}┃ ┣┫┣┫ ┃               ${C} ${g}t.me/Codex_369"
+        echo -e "  ${c}┃ ┣┫┣┫ ┃               ${C} ${g}t.me/Pranabmallik"
         echo -e "  ${c}┗┛┛┗┛┗ ┻"
         echo -e "  $T"
         echo -e "${lm}"
@@ -279,10 +279,10 @@ echo -e "      ${y} (____/(__)(__)(_)\_)(_)\_)   (_/\_)\n\n"
     echo
     echo -e "		        ${g}Hey ${y}$username"
     echo -e "${c}              (\_/)"
-    echo -e "              (${y}^ω^${c})     ${g}I'm Dx-Simu${c}"
+    echo -e "              (${y}^ω^${c})     ${g}I'm ＤＡＲＫ－ＰＲＩＮＣＥ  ايڪـͬــͤــᷜــͨــͣــͪـي${c}"
     echo -e "             ⊂(___)づ  ⋅˚₊‧ ଳ ‧₊˚ ⋅"
     echo
-    echo -e " ${A} ${c}Your account created ${g}Successfully¡${c}"
+    echo -e " ${A} ${c}DARK Your Account Created ${g}Successfully¡${c}"
     
     # Save the username
     echo "$username" > "$USERNAME_FILE"
