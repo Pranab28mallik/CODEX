@@ -244,14 +244,14 @@ setup() {
 # dx move
 ds="$HOME/.termux"
 dx="$ds/font.ttf"
-simu="$ds/colors.properties"
+prince="$ds/colors.properties"
 if [ -f "$dx" ]; then
     echo
 else
 	cp $HOME/CODEX/files/font.ttf "$ds"
 fi
 
-if [ -f "$simu" ]; then
+if [ -f "$prince" ]; then
     echo
 else 
         
