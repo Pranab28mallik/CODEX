@@ -110,15 +110,15 @@ n=$NC
 echo
 echo
 echo
-type_effect "[ ＤＡＲＫ－ＰＲＩＮＣＥ  ايڪـͬــͤــᷜــͨــͣــͪـي ]" 0.04
+type_effect "[ CODEX STARTED]" 0.04
 sleep 0.2
-type_effect "「HELLO DEAR OWNER ＤＡＲＫ－ＰＲＩＮＣＥ  ايڪـͬــͤــᷜــͨــͣــͪـي 」" 0.08
+type_effect "「HELLO DEAR USER I•M DX-SIMU 」" 0.08
 sleep 0.5
-type_effect "【𝐏𝐑𝐈𝐍𝐂𝐄•°⚠︎︎ WILL PROTECT YOU】" 0.08
+type_effect "【CODEX WILL PROTECT YOU】" 0.08
 sleep 0.7
 type_effect "<GOODBYE>" 0.08
 sleep 0.2
-type_effect "[ENJOY OUR 𝐏𝐑𝐈𝐍𝐂𝐄•°⚠︎︎]" 0.08
+type_effect "[ENJOY OUR CODEX]" 0.08
 sleep 0.5
 type_effect "!...............¡" 0.08
 echo
@@ -269,7 +269,7 @@ clear
 clear
 echo
 echo -e "               ${g}╔═══════════════╗"
-echo -e "               ${g}║ ${n}</>  ${c}ＤＡＲＫ－ＰＲＩＮＣＥ  ايڪـͬــͤــᷜــͨــͣــͪـي${g}  ║"
+echo -e "               ${g}║ ${n}</>  ${c}CODEX-X${g}  ║"
 echo -e "               ${g}╚═══════════════╝"
 echo -e "  ${g}╔════════════════════════════════════════════╗"
 echo -e "  ${g}║  ${C} ${y}Checking Your Internet Connection¡${g}  ║"
@@ -325,8 +325,8 @@ donotchange() {
     TEMP_FILE="$HOME/temp.zshrc"  # Actual temporary file
 
     # Use sed to replace SIMU with the name and save to temporary file
-    sed "s/PRINCE/$name/g" "$INPUT_FILE" > "$TEMP_FILE" &&
-    sed "s/PRINCE/$name/g" "$THEME_INPUT" > "$OUTPUT_THEME" &&
+    sed "s/SIMU/$name/g" "$INPUT_FILE" > "$TEMP_FILE" &&
+    sed "s/SIMU/$name/g" "$THEME_INPUT" > "$OUTPUT_THEME" &&
     echo "$name" > "$USERNAME_FILE" &&
     echo "" > "$VERSION"
 	echo "" > "$D1/ads.txt"
@@ -346,6 +346,194 @@ donotchange() {
         echo -e " ${A} ${c}Your Banner created ${g}Successfully¡${c}"
         echo
         sleep 3
+    else
+        echo
+        echo -e " ${E} ${r}Error occurred while processing the file."
+        sleep 1
+        # Clean up temporary file if sed fails
+        rm -f "$TEMP_FILE"
+    fi
+
+    echo
+    clear
+}
+
+banner() {
+echo
+echo
+echo -e "   ${y}░█████╗░░█████╗░██████╗░███████╗██╗░░██╗"
+echo -e "   ${y}██╔══██╗██╔══██╗██╔══██╗██╔════╝╚██╗██╔╝"
+echo -e "   ${y}██║░░╚═╝██║░░██║██║░░██║█████╗░░░╚███╔╝░"
+echo -e "   ${c}██║░░██╗██║░░██║██║░░██║██╔══╝░░░██╔██╗░"
+echo -e "   ${c}╚█████╔╝╚█████╔╝██████╔╝███████╗██╔╝╚██╗"
+echo -e "   ${c}░╚════╝░░╚════╝░╚═════╝░╚══════╝╚═╝░░╚═╝${n}"
+echo -e "${y}               +-+-+-+-+-+-+-+-+"
+echo -e "${c}               |D|S|-|C|O|D|E|X|"
+echo -e "${y}               +-+-+-+-+-+-+-+-+${n}"
+echo
+ if [ $random_number -eq 0 ]; then
+echo -e "${b}╭════════════════════════⊷"
+echo -e "${b}┃ ${g}[${n}ム${g}] ᴛɢ: ${y}t.me/Termuxcodex"
+echo -e "${b}╰════════════════════════⊷"
+        else
+echo -e "${b}╭══════════════════════════⊷"
+echo -e "${b}┃ ${g}[${n}ム${g}] ᴛɢ: ${y}t.me/alphacodex369"
+echo -e "${b}╰══════════════════════════⊷"
+        fi
+echo
+echo -e "${b}╭══ ${g}〄 ${y}ᴄᴏᴅᴇx ${g}〄"
+echo -e "${b}┃❁ ${g}ᴄʀᴇᴀᴛᴏʀ: ${y}ᴅx-ᴄᴏᴅᴇx"
+echo -e "${b}┃❁ ${g}ᴅᴇᴠɪᴄᴇ: ${y}${VENDOR} ${MODEL}"
+echo -e "${b}╰┈➤ ${g}Hey ${y}Dear"
+echo
+}
+termux() {
+spin
+}
+
+setupx() {
+if [ -d "/data/data/com.termux/files/usr/" ]; then
+    tr
+    dxnetcheck
+    
+    banner
+    echo -e " ${C} ${y}Detected Termux on Android¡"
+	echo -e " ${lm}"
+	echo -e " ${A} ${g}Updating Package..¡"
+	echo -e " ${dm}"
+    echo -e " ${A} ${g}Wait a few minutes.${n}"
+    echo -e " ${lm}"
+    termux
+    # dx check if D1DOS folder exists
+    if [ -d "$HOME/CODEX" ]; then
+        sleep 2
+	clear
+	banner
+	echo -e " ${A} ${p}Updating Completed...!¡"
+	echo -e " ${dm}"
+	clear
+	banner
+	echo -e " ${C} ${c}Package Setup Your Termux..${n}"
+	echo
+	echo -e " ${A} ${g}Wait a few minutes.${n}"
+	setup
+        donotchange
+	clear
+        banner
+        echo -e " ${C} ${c}Type ${g}exit ${c} then ${g}enter ${c}Now Open Your Termux¡¡ ${g}[${n}${HOMES}${g}]${n}"
+	echo
+	sleep 3
+	cd "$HOME"
+	rm -rf CODEX
+	exit 0
+	    else
+        clear
+        banner
+    echo -e " ${E} ${r}Tools Not Exits Your Terminal.."
+	echo
+	echo
+	sleep 3
+	exit
+    fi
+else
+echo -e " ${E} ${r}Sorry, this operating system is not supported ${p}| ${g}[${n}${HOST}${g}] ${SHELL}${n}"
+echo 
+echo -e " ${A} ${g} Wait for the next update using Linux...!¡"
+    echo
+	sleep 3
+	exit
+    fi
+}
+banner2() {
+echo
+echo
+echo -e "   ${y}░█████╗░░█████╗░██████╗░███████╗██╗░░██╗"
+echo -e "   ${y}██╔══██╗██╔══██╗██╔══██╗██╔════╝╚██╗██╔╝"
+echo -e "   ${y}██║░░╚═╝██║░░██║██║░░██║█████╗░░░╚███╔╝░"
+echo -e "   ${c}██║░░██╗██║░░██║██║░░██║██╔══╝░░░██╔██╗░"
+echo -e "   ${c}╚█████╔╝╚█████╔╝██████╔╝███████╗██╔╝╚██╗"
+echo -e "   ${c}░╚════╝░░╚════╝░╚═════╝░╚══════╝╚═╝░░╚═╝${n}"
+echo -e "${y}               +-+-+-+-+-+-+-+-+"
+echo -e "${c}               |D|S|-|C|O|D|E|X|"
+echo -e "${y}               +-+-+-+-+-+-+-+-+${n}"
+echo
+ if [ $random_number -eq 0 ]; then
+echo -e "${b}╭════════════════════════⊷"
+echo -e "${b}┃ ${g}[${n}ム${g}] ᴛɢ: ${y}t.me/Termuxcodex"
+echo -e "${b}╰════════════════════════⊷"
+        else
+echo -e "${b}╭══════════════════════════⊷"
+echo -e "${b}┃ ${g}[${n}ム${g}] ᴛɢ: ${y}t.me/alphacodex369"
+echo -e "${b}╰══════════════════════════⊷"
+        fi
+echo
+echo -e "${b}╭══ ${g}〄 ${y}ᴄᴏᴅᴇx ${g}〄"
+echo -e "${b}┃❁ ${g}ᴄʀᴇᴀᴛᴏʀ: ${y}ᴅx-ᴄᴏᴅᴇx"
+echo -e "${b}╰┈➤ ${g}Hey ${y}Dear"
+echo
+echo -e "${c}╭════════════════════════════════════════════════⊷"
+echo -e "${c}┃ ${p}❏ ${g}Choose what you want to use. then Click Enter${n}"
+echo -e "${c}╰════════════════════════════════════════════════⊷"
+
+}
+options=("Free Usage" "Premium")
+selected=0
+display_menu() {
+    clear
+    banner2
+    echo
+    echo -e " ${g}■ \e[4m${p}Select An Option\e[0m ${g}▪︎${n}"
+    echo
+    for i in "${!options[@]}"; do
+        if [ $i -eq $selected ]; then
+            echo -e " ${g}〄> ${c}${options[$i]} ${g}<〄${n}"
+        else
+            echo -e "     ${options[$i]}"
+        fi
+    done
+}
+
+# Main loop
+while true; do
+    display_menu
+    read -rsn1 input
+    if [[ "$input" == $'\e' ]]; then
+        read -rsn2 -t 0.1 input
+        case "$input" in
+            '[A') # Up arrow
+                ((selected--))
+                if [ $selected -lt 0 ]; then
+                    selected=$((${#options[@]} - 1))
+                fi
+                ;;
+            '[B') 
+                ((selected++))
+                if [ $selected -ge ${#options[@]} ]; then
+                    selected=0
+                fi
+                ;;
+            *)
+                display_menu
+                ;;
+        esac
+    elif [[ "$input" == "" ]]; then # Enter key
+        case ${options[$selected]} in
+            "Free Usage")
+            echo -e "\n ${g}[${n}${HOMES}${g}] ${c}Continue Free..!${n}"
+                sleep 1
+                setupx
+                ;;
+            "Premium")
+                echo -e "\n ${g}[${n}${HOST}${g}] ${c}Wait for opening Telegram..!${n}"
+                sleep 1
+                xdg-open "https://t.me/Codexownerbot"
+                cd "$HOME"
+            	rm -rf CODEX
+                exit 0
+                ;;
+        esac
+    fi
+doneep 3
     else
         echo
         echo -e " ${E} ${r}Error occurred while processing the file."
