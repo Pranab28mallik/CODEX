@@ -1,116 +1,172 @@
-# --- Custom Zsh Prompt Configuration (VIP Style) ---
+ZSH_THEME="codex"
+export ZSH=$HOME/.oh-my-zsh
+plugins=(git)
 
-# Load existing environment variables and functions
+source $HOME/.oh*/oh-my-zsh.sh
+source /data/data/com.termux/files/home/.oh-my-zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
+source /data/data/com.termux/files/home/.oh-my-zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+alias ls='lsd'
+alias la='lsd -lh --blocks size,name'
+alias dev='bash /$HOME/.CODEX/dev'
+alias report='bash /$HOME/.CODEX/dev'
+alias rd='termux-reload-settings'
+clear
 D1="$HOME/.termux"
-r='\033[91m' # Red
-p='\033[1;95m' # Purple
-y='\033[93m' # Yellow
-g='\033[92m' # Green
-n='\033[0m'  # Reset
-b='\033[94m' # Blue
-c='\033[96m' # Cyan
+r='\033[91m'
+p='\033[1;95m'
+y='\033[93m'
+g='\033[92m'
+n='\033[0m'
+b='\033[94m'
+c='\033[96m'
 
-# Define custom icons for better integration
-X='${c}❌${n}' # Error/Fail
-D='${y}◆${n}' # Main Logo/Separator
-E='${r}${n}' # Warning/Alert
-A='${g}${n}' # Success/OK
-C='${c}${n}' # Prompt Icon/Command Start
-
-# Icons from your original script
+X='\033[1;92m[\033[1;00m⎯꯭̽𓆩\033[1;92m]\033[1;96m'
+D='\033[1;92m[\033[1;00m〄\033[1;92m]\033[1;93m'
+E='\033[1;92m[\033[1;00m×\033[1;92m]\033[1;91m'
+A='\033[1;92m[\033[1;00m+\033[1;92m]\033[1;92m'
+C='\033[1;92m[\033[1;00m</>\033[1;32m]\033[1;92m'
+lm='\033[96m▱▱▱▱▱▱▱▱▱▱▱▱\033[0m〄\033[96m▱▱▱▱▱▱▱▱▱▱▱▱\033[1;00m'
+dm='\033[93m▱▱▱▱▱▱▱▱▱▱▱▱\033[0m〄\033[93m▱▱▱▱▱▱▱▱▱▱▱▱\033[1;00m'
+aHELL="\uf489"
 USER="\uf007"
 TERMINAL="\ue7a2"
 PKGS="\uf8d6"
+UPT="\uf49b"
 CAL="\uf073"
 
-# --- Zsh Options ---
-unsetopt NOTIFY
-set +m
-setopt PROMPT_SUBST # Required for function calls and substitutions in PROMPT
-setopt PROMPT_PERCENT # Allows %() syntax
-
-# --- Function: Git Prompt Info ---
-function vip_git_prompt() {
-  # Check if we are in a Git repository
-  if [ -d .git ]; then
-    local branch_name=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
-    [[ -z "$branch_name" ]] && branch_name='(detached)'
-
-    local git_status_char=' '
-    # Check for uncommitted changes
-    if [[ $(git status --porcelain 2>/dev/null) ]]; then
-      git_status_char="${r}●${n}" # Unclean
-    else
-      git_status_char="${g}●${n}" # Clean
-    fi
-    # Format: [  main ● ]
-    echo " ${b}${n} ${y}${branch_name}${n}${git_status_char}"
-  fi
-}
-local git_segment='$(vip_git_prompt)'
-
-# --- Function: Disk Usage Check (Simplified for Prompt) ---
-function vip_disk_usage() {
-    local threshold=90 # Use a slightly lower threshold for the prompt
+bol='\033[1m'
+bold="${bol}\e[4m"
+THRESHOLD=100
+check_disk_usage() {
+    local threshold=${1:-$THRESHOLD}
+    local total_size
     local used_size
     local disk_usage
 
-    disk_usage=$(df "$HOME" | awk 'NR==2 {print $5}' | sed 's/%//g')
+    total_size=$(df -h "$HOME" | awk 'NR==2 {print $2}')
     used_size=$(df -h "$HOME" | awk 'NR==2 {print $3}')
+    disk_usage=$(df "$HOME" | awk 'NR==2 {print $5}' | sed 's/%//g')
 
     if [ "$disk_usage" -ge "$threshold" ]; then
-        # Warning high disk usage
-        echo "${r} ${n}${r}${disk_usage}%${n}${y} U:${used_size}${n}"
+        echo -e " ${g}[${n}\uf0a0${g}] ${r}WARN: ${c}Disk Full ${g}${disk_usage}% ${c}| ${c}U${g}${used_size} ${c}of ${c}T${g}${total_size}"
     else
-        # Normal disk usage
-        echo "${c} ${n}${g}${disk_usage}%${n}${y} U:${used_size}${n}"
-    fi
-}
-local disk_segment='$(vip_disk_usage)'
-
-# --- The Main Prompt (PROMPT) ---
-# Structure: [STATUS] [USER@HOST] [CWD] [GIT]
-PROMPT="
-${b}┌─${n} %(!.${X}.%A) ${g}[${n}${USER}${g}] ${c}%n@%m ${b}│${n} ${p}%~ ${git_segment}
-${b}└─${n} %(!.${r}.${g})${C}${n} "
-
-# --- Dynamic Right Prompt (RPROMPT) ---
-typeset -g __zsh_exec_timer
-
-preexec() {
-    # Start timer for substantial commands (retaining your original logic)
-    if [[ $1 =~ ^(bash|sh|python|python3|nano|vim|vi|open|pkg|apt|php) ]] && [[ $(echo $1 | wc -w) -ge 2 ]]; then
-        __zsh_exec_timer=$(date +%s)
+        echo -e " ${g}[${n}\uf0e7${g}] ${c}Disk usage: ${g}${disk_usage}% ${c}| ${c}U${g}${used_size} ${c}of ${c}T${g}${total_size}"
     fi
 }
 
-precmd() {
-    # Run the background script silently
-    $HOME/.CODEX/dx-simu.sh &> /dev/null &
+data=$(check_disk_usage)
 
-    local elapsed_str
+spin() {
+    local pid=$1
+    local delay=0.40
+    local spinner=('█■■■■' '■█■■■' '■■█■■' '■■■█■' '■■■■█')
 
-    if [[ -n $__zsh_exec_timer ]]; then
-        local now=$(date +%s)
-        local elapsed=$((now - __zsh_exec_timer))
-        local hours=$((elapsed / 3600))
-        local minutes=$(( (elapsed % 3600) / 60 ))
-        local seconds=$((elapsed % 60))
-
-        # Format time string (h:m:s)
-        if [[ $hours -gt 0 ]]; then elapsed_str+="${hours}h"; fi
-        if [[ $minutes -gt 0 || $hours -gt 0 ]]; then elapsed_str+="${minutes}m"; fi
-        elapsed_str+="${seconds}s"
-        
-        # Right Prompt with Timer
-        RPROMPT="${p}[${n}${y} ${n}${g}${elapsed_str}${p}]${n}"
-        unset __zsh_exec_timer
-    else
-        # Right Prompt with Date/Time and Disk Status
-        # Format: [  HH:MM:SS | Disk ]
-        local date_time="${c}%D{%L:%M:%S}%n"
-        
-        # Combine Time and Disk Usage
-        RPROMPT="${p}[${n}${CAL}${n} ${date_time} ${c}|${n} ${disk_segment}${p}]${n}"
-    fi
+    while ps -p $pid > /dev/null 2>/dev/null; do
+        for i in "${spinner[@]}"; do
+            tput civis
+            echo -ne "\033[1;96m\r [+] Downloading..please wait.........\e[33m[\033[1;92m$i\033[1;93m]\033[1;0m    "
+            sleep $delay
+            printf "\b\b\b\b\b\b\b\b"
+        done
+    done
+    printf "    \b\b\b\b\b"
+    tput cnorm
+    printf "\e[1;93m [Done]\e[0m\n"
+    echo
+    sleep 1
 }
+
+banner() {
+    clear
+    echo
+    echo -e "    ${y}░█████╗░░█████╗░██████╗░███████╗██╗░░██╗"
+    echo -e "    ${y}██╔══██╗██╔══██╗██╔══██╗██╔════╝╚██╗██╔╝"
+    echo -e "    ${y}██║░░╚═╝██║░░██║██║░░██║█████╗░░░╚███╔╝░"
+    echo -e "    ${c}██║░░██╗██║░░██║██║░░██║██╔══╝░░░██╔██╗░"
+    echo -e "    ${c}╚█████╔╝╚█████╔╝██████╔╝███████╗██╔╝╚██╗"
+    echo -e "    ${c}░╚════╝░░╚════╝░╚═════╝░╚══════╝╚═╝░░╚═╝${n}"
+    echo
+}
+
+VERSION="$D1/dx.txt"
+if [[ -n "$(cat "$VERSION")" ]]; then
+    version=$(cat "$VERSION")
+    banner
+    echo -e " ${A} ${c}Tools Updated ${n}| ${c}New ${g}$version"
+    sleep 3
+    echo "" > "$D1/dx.txt"
+    git clone https://github.com/Alpha-Codex369/CODEX.git &> /dev/null &
+    spin
+    cd CODEX
+    bash install.sh
+else
+    clear
+fi
+
+load() {
+clear
+echo -e "${TERMINAL}${r}●${n}"
+sleep 0.2
+clear
+echo -e "${TERMINAL}${r}●${y}●${n}"
+sleep 0.2
+clear
+echo -e "${TERMINAL}${r}●${y}●${b}●${n}"
+sleep 0.2
+}
+widths=$(stty size | awk '{print $2}')
+width=$(tput cols)
+var=$((width - 1))
+var2=$(seq -s═ ${var} | tr -d '[:digit:]')
+var3=$(seq -s\  ${var} | tr -d '[:digit:]')
+var4=$((width - 20))
+
+PUT() { echo -en "\033[${1};${2}H"; }
+DRAW() { echo -en "\033%"; echo -en "\033(0"; }
+WRITE() { echo -en "\033(B"; }
+HIDECURSOR() { echo -en "\033[?25l"; }
+NORM() { echo -en "\033[?12l\033[?25h"; }
+
+HIDECURSOR
+load
+clear
+
+width=$(tput cols)
+prefix="${TERMINAL}${r}●${y}●${b}●${n}"
+clean_prefix=$(echo -e "$prefix" | sed 's/\x1b\[[0-9;]*m//g')
+prefix_len=${#clean_prefix}
+clean_data=$(echo -e "${data}" | sed 's/\x1b\[[0-9;]*m//g')
+data_len=${#clean_data}
+data_start=$(((width - data_len) / 2))
+padding=$((data_start - prefix_len))
+if [ $padding -lt 0 ]; then padding=0; fi
+spaces=$(printf '%*s' $padding "")
+echo -e "${prefix}${spaces}${data}${c}"
+
+echo "╔${var2}╗"
+for ((i=1; i<=8; i++)); do
+    echo "║${var3}║"
+done
+echo "╚${var2}╝"
+PUT 4 0
+figlet -c -f ASCII-Shadow -w $width SIMU | lolcat
+PUT 3 0
+echo -e "\033[36;1m"
+for ((i=1; i<=7; i++)); do
+    echo "║"
+done
+PUT 10 ${var4}
+echo -e "\e[32m[\e[0m\uf489\e[32m] \e[36mCODEX \e[36m1.4\e[0m"
+PUT 12 0
+ADS="$D1/ads.txt"
+if [[ -n "$(cat "$ADS")" ]]; then
+    content=$(cat "$ADS")
+    echo -e " ${g}[${n}${PKGS}${g}] ${c}Ｃｏｄｅｘ: ${g}$content"
+    echo "" > "$D1/ads.txt"
+else
+    DATE=$(date +"%Y-%b-%a ${g}—${c} %d")
+    TM=$(date +"%I:%M:%S ${g}— ${c}%p")
+    echo -e " ${g}[${n}${CAL}${g}] ${c}${TM} ${g}| ${c}${DATE}"
+fi
+NORM
+
