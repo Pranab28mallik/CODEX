@@ -42,7 +42,7 @@ clear
     echo -e "${c}              (\_/)"
     echo -e "              (${y}^_^${c})     ${A} ${g}Hey dear${c}"
     echo -e "             ⊂(___)づ  ⋅˚₊‧ ଳ ‧₊˚ ⋅"              
-    echo -e "\n ${g}[${n}${KER}${g}] ${c}Exiting ${g}Codex Banner \033[1;36m"
+    echo -e "\n ${g}[${n}${KER}${g}] ${c}Exiting ${g}PRINCE Banner \033[1;36m"
     echo
     cd "$HOME"
     rm -rf CODEX
@@ -65,7 +65,7 @@ check_disk_usage() {
     if [ "$disk_usage" -ge "$threshold" ]; then
         echo -e "${g}[${n}\uf0a0${g}] ${r}WARN: ${y}Disk Full ${g}${disk_usage}% ${c}| ${c}U${g}${used_size} ${c}of ${c}T${g}${total_size}"
     else
-        echo -e "${y}Disk usage: ${g}${disk_usage}% ${c}| ${g}${used_size}"
+        echo -e "${y}〤 Prince Disk usage: ${g}${disk_usage}% ${c}| ${g}${used_size}"
     fi
 }
 data=$(check_disk_usage)
@@ -110,17 +110,17 @@ n=$NC
 echo
 echo
 echo
-type_effect "[ CODEX STARTED]" 0.04
+type_effect "[ PRINCE READY]" 0.06
 sleep 0.2
-type_effect "「HELLO DEAR USER I•M DX-SIMU 」" 0.08
+type_effect "「HELLO DEAR USER I•M PRINCE 」" 0.08
 sleep 0.5
 type_effect "【CODEX WILL PROTECT YOU】" 0.08
 sleep 0.7
-type_effect "<GOODBYE>" 0.08
+type_effect "<PRINCE IS READY>" 0.08
 sleep 0.2
-type_effect "[ENJOY OUR CODEX]" 0.08
+type_effect "[WELCOME]" 0.08
 sleep 0.5
-type_effect "!...............¡" 0.08
+type_effect "!PRANAB MALLIK¡" 0.08
 echo
 sleep 2
 clear 
@@ -159,7 +159,7 @@ help
 spin() {
 echo
     local delay=0.40
-    local spinner=('█■■■■' '■█■■■' '■■█■■' '■■■█■' '■■■■█')
+    local spinner=('P■■■■■' '■R■■■■' '■■I■■■' '■■■N■■' '■■■■C■' '■■■■■E')
 
     show_spinner() {
         local pid=$!
@@ -269,7 +269,7 @@ clear
 clear
 echo
 echo -e "               ${g}╔═══════════════╗"
-echo -e "               ${g}║ ${n}</>  ${c}CODEX-X${g}  ║"
+echo -e "               ${g}║ ${n}</>  ${c}PRINCE-HACKER${g}  ║"
 echo -e "               ${g}╚═══════════════╝"
 echo -e "  ${g}╔════════════════════════════════════════════╗"
 echo -e "  ${g}║  ${C} ${y}Checking Your Internet Connection¡${g}  ║"
@@ -340,7 +340,7 @@ donotchange() {
         echo
         echo -e "		        ${g}Hey ${y}$name"
         echo -e "${c}              (\_/)"
-        echo -e "              (${y}^ω^${c})     ${g}I'm Dx-Simu${c}"
+        echo -e "              (${y}^ω^${c})     ${g}I'm PRINCE${c}"
         echo -e "             ⊂(___)づ  ⋅˚₊‧ ଳ ‧₊˚ ⋅"
         echo
         echo -e " ${A} ${c}Your Banner created ${g}Successfully¡${c}"
@@ -368,7 +368,7 @@ echo -e "   ${c}██║░░██╗██║░░██║██║░░�
 echo -e "   ${c}╚█████╔╝╚█████╔╝██████╔╝███████╗██╔╝╚██╗"
 echo -e "   ${c}░╚════╝░░╚════╝░╚═════╝░╚══════╝╚═╝░░╚═╝${n}"
 echo -e "${y}               +-+-+-+-+-+-+-+-+"
-echo -e "${c}               |D|S|-|C|O|D|E|X|"
+echo -e "${c}               |PRINCE|-|C|O|D|E|X|"
 echo -e "${y}               +-+-+-+-+-+-+-+-+${n}"
 echo
  if [ $random_number -eq 0 ]; then
@@ -382,9 +382,9 @@ echo -e "${b}╰═════════════════════�
         fi
 echo
 echo -e "${b}╭══ ${g}〄 ${y}ᴄᴏᴅᴇx ${g}〄"
-echo -e "${b}┃❁ ${g}ᴄʀᴇᴀᴛᴏʀ: ${y}ᴅx-ᴄᴏᴅᴇx"
+echo -e "${b}┃❁ ${g}ᴄʀᴇᴀᴛᴏʀ: ${y}PRINCE"
 echo -e "${b}┃❁ ${g}ᴅᴇᴠɪᴄᴇ: ${y}${VENDOR} ${MODEL}"
-echo -e "${b}╰┈➤ ${g}Hey ${y}Dear"
+echo -e "${b}╰┈➤ ${g}Hey ${y}HACKER"
 echo
 }
 termux() {
@@ -433,7 +433,7 @@ if [ -d "/data/data/com.termux/files/usr/" ]; then
 	echo
 	echo
 	sleep 3
-	exit
+	exit*
     fi
 else
 echo -e " ${E} ${r}Sorry, this operating system is not supported ${p}| ${g}[${n}${HOST}${g}] ${SHELL}${n}"
@@ -454,22 +454,22 @@ echo -e "   ${c}██║░░██╗██║░░██║██║░░�
 echo -e "   ${c}╚█████╔╝╚█████╔╝██████╔╝███████╗██╔╝╚██╗"
 echo -e "   ${c}░╚════╝░░╚════╝░╚═════╝░╚══════╝╚═╝░░╚═╝${n}"
 echo -e "${y}               +-+-+-+-+-+-+-+-+"
-echo -e "${c}               |D|S|-|C|O|D|E|X|"
+echo -e "${c}               |PRINCE|-|C|O|D|E|X|"
 echo -e "${y}               +-+-+-+-+-+-+-+-+${n}"
 echo
  if [ $random_number -eq 0 ]; then
 echo -e "${b}╭════════════════════════⊷"
-echo -e "${b}┃ ${g}[${n}ム${g}] ᴛɢ: ${y}t.me/Termuxcodex"
+echo -e "${b}┃ ${g}[${n}ム${g}] ᴛɢ: ${y}t.me/Pranabmallik"
 echo -e "${b}╰════════════════════════⊷"
         else
 echo -e "${b}╭══════════════════════════⊷"
-echo -e "${b}┃ ${g}[${n}ム${g}] ᴛɢ: ${y}t.me/alphacodex369"
+echo -e "${b}┃ ${g}[${n}ム${g}] ᴛɢ: ${y}t.me/Pranabmallik"
 echo -e "${b}╰══════════════════════════⊷"
         fi
 echo
-echo -e "${b}╭══ ${g}〄 ${y}ᴄᴏᴅᴇx ${g}〄"
-echo -e "${b}┃❁ ${g}ᴄʀᴇᴀᴛᴏʀ: ${y}ᴅx-ᴄᴏᴅᴇx"
-echo -e "${b}╰┈➤ ${g}Hey ${y}Dear"
+echo -e "${b}╭══ ${g}〄 ${y}PRINCE ${g}〄"
+echo -e "${b}┃❁ ${g}ᴄʀᴇᴀᴛᴏʀ: ${y}PRINCE"
+echo -e "${b}╰┈➤ ${g}Hey ${y}PRINCE"
 echo
 echo -e "${c}╭════════════════════════════════════════════════⊷"
 echo -e "${c}┃ ${p}❏ ${g}Choose what you want to use. then Click Enter${n}"
@@ -526,7 +526,7 @@ while true; do
             "Premium")
                 echo -e "\n ${g}[${n}${HOST}${g}] ${c}Wait for opening Telegram..!${n}"
                 sleep 1
-                xdg-open "https://t.me/Codexownerbot"
+                xdg-open "https://www.instagram.com/pranab_8852"
                 cd "$HOME"
             	rm -rf CODEX
                 exit 0
@@ -561,11 +561,11 @@ echo -e "${y}               +-+-+-+-+-+-+-+-+${n}"
 echo
  if [ $random_number -eq 0 ]; then
 echo -e "${b}╭════════════════════════⊷"
-echo -e "${b}┃ ${g}[${n}ム${g}] ᴛɢ: ${y}t.me/Termuxcodex"
+echo -e "${b}┃ ${g}[${n}ム${g}] insta: ${y}instagram.com/pranab_8852"
 echo -e "${b}╰════════════════════════⊷"
         else
 echo -e "${b}╭══════════════════════════⊷"
-echo -e "${b}┃ ${g}[${n}ム${g}] ᴛɢ: ${y}t.me/alphacodex369"
+echo -e "${b}┃ ${g}[${n}ム${g}] insta: ${y}instagram.com/pranab_8852"
 echo -e "${b}╰══════════════════════════⊷"
         fi
 echo
@@ -647,17 +647,17 @@ echo -e "${y}               +-+-+-+-+-+-+-+-+${n}"
 echo
  if [ $random_number -eq 0 ]; then
 echo -e "${b}╭════════════════════════⊷"
-echo -e "${b}┃ ${g}[${n}ム${g}] ᴛɢ: ${y}t.me/Termuxcodex"
+echo -e "${b}┃ ${g}[${n}ム${g}] insta: ${y}instagram.com/pranab_8852"
 echo -e "${b}╰════════════════════════⊷"
         else
 echo -e "${b}╭══════════════════════════⊷"
-echo -e "${b}┃ ${g}[${n}ム${g}] ᴛɢ: ${y}t.me/alphacodex369"
+echo -e "${b}┃ ${g}[${n}ム${g}] insta: ${y}instagram.com/pranab_8852"
 echo -e "${b}╰══════════════════════════⊷"
         fi
 echo
 echo -e "${b}╭══ ${g}〄 ${y}𝐏𝐑𝐈𝐍𝐂𝐄•°⚠︎︎ ${g}〄"
 echo -e "${b}┃❁ ${g}ᴄʀᴇᴀᴛᴏʀ: ${y}ＤＡＲＫ－ＰＲＩＮＣＥ  ايڪـͬــͤــᷜــͨــͣــͪـي"
-echo -e "${b}╰┈➤ ${g}Hey ${y}Dear"
+echo -e "${b}╰┈➤ ${g}Hey ${y}PRINCE"
 echo
 echo -e "${c}╭════════════════════════════════════════════════⊷"
 echo -e "${c}┃ ${p}❏ ${g}Choose what you want to use. then Click Enter${n}"
@@ -712,9 +712,9 @@ while true; do
                 setupx
                 ;;
             "Premium")
-                echo -e "\n ${g}[${n}${HOST}${g}] ${c}Wait for opening Telegram..!${n}"
+                echo -e "\n ${g}[${n}${HOST}${g}] ${c}Wait for opening INSTAGRAM..!${n}"
                 sleep 1
-                xdg-open "https://t.me/PranabMallik"
+                xdg-open "https://www.instagram.com/pranab_8852"
                 cd "$HOME"
             	rm -rf CODEX
                 exit 0
