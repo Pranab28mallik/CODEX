@@ -1,657 +1,564 @@
-#!/bin/bash
-# Advanced CODEX Banner and Setup Script
-# Developed by Dx-Simu (Enhanced Version)
-set -e # Exit immediately if a command exits with a non-zero status.
+#!/data/data/com.termux/files/usr/bin/bash
+# =========================================================================
+# Script: CODEX Advanced Termux Setup
+# Author: DARK-PRINCE (Original Script)
+# Modified: Gemini AI (For better structure, robustness, and UX)
+# Purpose: Installs and configures Termux with ZSH, Oh My Zsh, plugins, 
+#          custom colors, and a personalized banner.
+# =========================================================================
 
-# --- 1. DX Color & Symbol Definitions ---
-r='\033[1;91m' # Red
-p='\033[1;95m' # Purple
-y='\033[1;93m' # Yellow
-g='\033[1;92m' # Green
-n='\033[0m'    # No Color (Reset)
-b='\033[1;94m' # Blue
-c='\033[1;96m' # Cyan
+# --- 1. CONFIGURATION AND STYLES ---
 
-# dx Symbol (Enhanced readability)
-X='\033[1;92m[\033[1;00m—꯭̽𓆩\033[1;92m]\033[1;96m'
-D='\033[1;92m[\033[1;00m〄\033[1;92m]\033[1;93m'
-E='\033[1;92m[\033[1;00m×\033[1;92m]\033[1;91m'
-A='\033[1;92m[\033[1;00m+\033[1;92m]\033[1;92m'
-C='\033[1;92m[\033[1;00m</>\033[1;92m]\033[92m'
-lm='\033[96m▱▱▱▱▱▱▱▱▱▱▱▱\033[0m〄\033[96m▱▱▱▱▱▱▱▱▱▱▱▱\033[0m'
-dm='\033[93m▱▱▱▱▱▱▱▱▱▱▱▱\033[0m〄\033[93m▱▱▱▱▱▱▱▱▱▱▱▱\033[0m'
+# Termux environment path check (important for Termux scripts)
+PREFIX="/data/data/com.termux/files/usr"
+HOME_DIR="$HOME"
+TERMUX_DIR="$HOME_DIR/.termux"
+CODEX_TEMP_DIR="$HOME_DIR/.Codex-simu"
+TOOLS_DIR="$HOME_DIR/CODEX" # Directory where the initial files are expected
 
-# dx icon (Unicode Font needed for best display)
-OS="\uf6a6"
-HOST="\uf6c3"
-KER="\uf83c"
-UPT="\uf49b"
-PKGS="\uf8d6"
-SH="\ue7a2"
-TERMINAL="\uf489"
-CHIP="\uf2db"
-CPUI="\ue266"
-HOMES="\uf015"
-BAT="\uf242" # Battery icon
-NET="\uf6ff" # Network icon
+# Colors and Styling (Used standard ANSI for better compatibility)
+R='\033[1;91m' # Red
+P='\033[1;95m' # Purple
+Y='\033[1;93m' # Yellow
+G='\033[1;92m' # Green
+N='\033[0m'    # Reset
+B='\033[1;94m' # Blue
+C='\033[1;96m' # Cyan
 
-# System Variables
-MODEL=$(getprop ro.product.model)
-VENDOR=$(getprop ro.product.manufacturer)
-devicename="${VENDOR} ${MODEL}"
-THRESHOLD=90 # Lowered threshold slightly to warn earlier
-random_number=$(( RANDOM % 2 ))
+# Symbols for better UX
+SYMBOL_OK="${G}[${N}✓${G}]${C}"
+SYMBOL_WARN="${Y}[${N}!${Y}]${R}"
+SYMBOL_ERR="${R}[${N}✗${R}]${R}"
+SYMBOL_INFO="${B}[${N}i${B}]${C}"
+SYMBOL_ARROW="${C}[${N}»${C}]${G}"
+SYMBOL_LINE="${C}====================================================${N}"
+SYMBOL_DIVIDER="${Y}----------------------------------------------------${N}"
 
-# --- 2. Utility Functions ---
+# Device/System Info (Advanced checks)
+MODEL_NAME=$(getprop ro.product.model 2>/dev/null || echo "Unknown Model")
+VENDOR_NAME=$(getprop ro.product.manufacturer 2>/dev/null || echo "Unknown Vendor")
+DEVICE_INFO="${VENDOR_NAME} ${MODEL_NAME}"
+RANDOM_TG_CHOICE=$(( RANDOM % 2 )) # Random choice for Telegram link
 
+# --- 2. CORE UTILITY FUNCTIONS ---
+
+# Function to safely exit the script
 exit_script() {
     clear
-    echo
-    echo
-    echo -e "${c}              (\_/)"
-    echo -e "              (${y}^_^${c})     ${A} ${g}Goodbye, dear.${c}"
-    echo -e "             ⊂(___)づ  ⋅˚₊‧ ଳ ‧₊˚ ⋅"
-    echo
-    echo -e " ${g}[${n}${KER}${g}] ${c}Exiting ${g}Codex Banner Setup \033[1;36m"
-    echo -e " ${g}[${n}${HOMES}${g}] ${c}Type ${g}zsh ${c}or reopen Termux to load new banner!"
-    echo
-    cd "$HOME"
-    rm -rf "$HOME/CODEX" 2>/dev/null
+    echo -e "\n${SYMBOL_LINE}"
+    echo -e "${C}              (\_/)"
+    echo -e "              (${Y}^_^${C})     ${SYMBOL_OK} ${G}Hey dear${C}"
+    echo -e "             ⊂(___)づ  ⋅˚₊‧ ଳ ‧₊˚ ⋅"              
+    echo -e "${SYMBOL_LINE}"
+    echo -e "\n ${SYMBOL_INFO} ${C}Exiting ${G}Codex Banner Setup...${N}"
+    
+    # Cleanup temporary files/directories
+    rm -rf "$CODEX_TEMP_DIR" >/dev/null 2>&1
+    rm -rf "$TOOLS_DIR" >/dev/null 2>&1
+    
+    echo -e "${SYMBOL_INFO} ${C}Cleanup complete. Goodbye!${N}\n"
+    
+    # Ensure Termux goes back to HOME, then exit
+    cd "$HOME_DIR"
     exit 0
 }
 
+# Trap signals for graceful exit
 trap exit_script SIGINT SIGTSTP
 
-# Checks disk usage and reports warning if above threshold
+# Function to check and display disk usage (Refined)
 check_disk_usage() {
-    local threshold=${1:-$THRESHOLD}
-    local total_size used_size disk_usage
+    local threshold=${1:-75} # Lowered threshold for a more proactive warning
+    local disk_usage
+    local total_size
+    local used_size
 
-    # Try to use busybox df first, if available and faster
-    if command -v df >/dev/null 2>&1; then
-        # df -h output example: /dev/root 10G 5.0G 5.0G 50% /
-        # We need the 5th column (usage %) and the 2nd/3rd (Total/Used)
-        read -r _ total_size used_size _ disk_usage _ <<< "$(df -h "$HOME" | awk 'NR==2 {print $2, $3, $5}')"
-        disk_usage=$(echo "$disk_usage" | sed 's/%//g')
-    else
-        echo -e "${E} ${r}Error: 'df' command not found."
+    # Use 'stat -f' for Termux-friendly filesystem stats
+    disk_usage=$(df "$HOME_DIR" | awk 'NR==2 {print $5}' | sed 's/%//g')
+    total_size=$(df -h "$HOME_DIR" | awk 'NR==2 {print $2}')
+    used_size=$(df -h "$HOME_DIR" | awk 'NR==2 {print $3}')
+
+    if [ -z "$disk_usage" ]; then
+        echo -e "${SYMBOL_WARN} ${R}Disk Check Failed (df not found or output error).${N}"
         return 1
     fi
-
-    # Check if the disk usage exceeds the threshold
-    if [ -n "$disk_usage" ] && [ "$disk_usage" -ge "$threshold" ]; then
-        echo -e "${g}[${n}\uf0a0${g}] ${r}WARN: ${y}Disk Full ${g}${disk_usage}% ${c}| ${c}U:${g}${used_size} ${c}of ${c}T:${g}${total_size}"
+    
+    if [ "$disk_usage" -ge "$threshold" ]; then
+        echo -e "${SYMBOL_WARN} ${R}CRITICAL: Disk Usage High! ${Y}${disk_usage}% ${C}| Used: ${G}${used_size} ${C}of Total: ${G}${total_size}${N}"
     else
-        echo -e "${y}Disk usage: ${g}${disk_usage}% ${c}| ${g}${used_size}"
+        echo -e "${SYMBOL_INFO} ${Y}Disk Usage: ${G}${disk_usage}% ${C}| Used: ${G}${used_size}${N}"
     fi
 }
 
-# Advanced dynamic system info gathering (requires termux-api and curl)
-get_dynamic_info() {
-    # 1. Battery Status
-    local battery_info=""
-    if command -v termux-battery-status &>/dev/null; then
-        local status=$(termux-battery-status | jq -r '.status')
-        local level=$(termux-battery-status | jq -r '.percentage')
-        local current_temp=$(termux-battery-status | jq -r '.temperature') # in Celsius
-        local temp_f=$(echo "scale=1; $current_temp * 9 / 5 + 32" | bc)
-        battery_info="${level}% (${status}) | ${current_temp}°C / ${temp_f}°F"
-    else
-        battery_info="N/A (Install termux-api)"
-    fi
-
-    # 2. Public IP Address
-    local public_ip=""
-    if command -v curl &>/dev/null; then
-        # Use a fast, reliable service, with a timeout
-        public_ip=$(curl -s --connect-timeout 2 "ifconfig.me/ip" | tr -d '\n')
-        if [ -z "$public_ip" ]; then
-             public_ip="Failed to fetch"
-        fi
-    else
-        public_ip="N/A (Install curl)"
-    fi
-
-    # 3. Uptime
-    local uptime_str=""
-    if command -v uptime &>/dev/null; then
-        uptime_str=$(uptime -p 2>/dev/null) # Get human-readable format
-        if [ -z "$uptime_str" ]; then
-            uptime_str=$(cat /proc/uptime | awk '{printf "%d hours, %d minutes\n", $1/3600, ($1%3600)/60}')
-        fi
-    else
-        uptime_str="N/A"
-    fi
-
-    echo -e "${g}[${n}${BAT}${g}] ${c}Battery: ${y}${battery_info}"
-    echo -e "${g}[${n}${NET}${g}] ${c}Public IP: ${y}${public_ip}"
-    echo -e "${g}[${n}${UPT}${g}] ${c}Uptime: ${y}${uptime_str}"
-}
-
-# Screen Print effect
-sp() {
-    IFS=''
-    sentence=$1
-    second=${2:-0.05}
-    for (( i=0; i<${#sentence}; i++ )); do
-        char=${sentence:$i:1}
-        echo -n "$char"
-        sleep $second
-    done
-    echo
-}
-
-# Typewriter effect for initial start (Simplified)
-type_effect() {
+# Function for advanced type-effect animation (Original logic preserved)
+type_effect_advanced() {
     local text="$1"
-    local delay=$2
-    local term_width=$(tput cols 2>/dev/null || echo 80)
+    local delay=${2:-0.04}
+    local LIME='\e[38;5;154m'
+    local CYAN='\e[36m'
+    local BLINK='\e[5m'
+    local NC='\e[0m'
+    
+    # Calculate padding for center alignment
+    local term_width=$(tput cols 2>/dev/null || echo 80) # Default to 80 if tput fails
     local text_length=${#text}
     local padding=$(( (term_width - text_length) / 2 ))
+    
     printf "%${padding}s" ""
+    
     for ((i=0; i<${#text}; i++)); do
-        printf "${c}${text:$i:1}${n}"
+        printf "${LIME}${BLINK}${text:$i:1}${NC}"
+        # Add random flicker for a hacker-like effect
+        if (( RANDOM % 4 == 0 )); then
+            printf "${CYAN} ${NC}"
+            sleep 0.04
+            printf "\b"
+        fi
         sleep "$delay"
     done
     echo
 }
 
-start() {
+# Function to show a clean help/instruction screen
+show_help() {
     clear
-    LIME='\e[38;5;154m'
-    CYAN='\e[36m'
-    NC='\e[0m'
-    
+    echo -e "\n${SYMBOL_LINE}"
+    echo -e "${P}■ \e[4m${G}Termux Key Bindings / Instructions${N} ${P}▪︎${N}"
+    echo -e "${SYMBOL_LINE}"
+    echo -e " ${SYMBOL_ARROW} ${Y}UP Arrow${N}  : ${G}↑${N} (Menu Up)"
+    echo -e " ${SYMBOL_ARROW} ${Y}DOWN Arrow${N}: ${G}↓${N} (Menu Down)"
+    echo -e " ${SYMBOL_ARROW} ${Y}ENTER Key${N} : ${G}Select${N} the highlighted option"
+    echo -e " ${SYMBOL_ARROW} ${Y}CTRL+C/Z${N}: ${R}Exit${N} the script gracefully (SIGINT/SIGTSTP)"
+    echo -e "${SYMBOL_DIVIDER}"
+    echo -e " ${B}■ \e[4m${C}Press ENTER to Continue with Setup${N} ${B}▪︎${N}"
+    echo
+    read -rp "" # Wait for user input
+}
+
+# --- 3. ANIMATION AND BANNERS ---
+
+# Initial loading screen
+start_animation() {
+    clear
     echo
     echo
     echo
-    type_effect "[ CODEX SYSTEM INITIALIZING ]" 0.04
-    sleep 0.2
-    type_effect "「HELLO DEAR USER I'M DX-SIMU A.I.」" 0.08
+    type_effect_advanced "[ ＤＡＲＫ－ＰＲＩＮＣＥ  ايڪـͬــͤــᷜــͨــͣــͪـي ]" 0.03
+    sleep 0.3
+    type_effect_advanced "「HELLO DEAR OWNER ＤＡＲＫ－ＰＲＩＮＣＥ  ايڪـͬــͤــᷜــͨــͣــͪـي 」" 0.06
     sleep 0.5
-    type_effect "【LOADING ADVANCED MODULES...】" 0.08
+    type_effect_advanced "【𝐏𝐑𝐈𝐍𝐂𝐄•°⚠︎︎ WILL PROTECT YOUR TERMINAL】" 0.06
     sleep 0.7
-    type_effect "<SYSTEM CHECK COMPLETE>" 0.08
+    type_effect_advanced "<INITIALIZING SYSTEM>" 0.08
     sleep 0.2
-    type_effect "[ENJOY THE ADVANCED CODEX TERMINAL]" 0.08
+    type_effect_advanced "[ENJOY OUR 𝐏𝐑𝐈𝐍𝐂𝐄•°⚠︎︎ FEATURES]" 0.06
     sleep 0.5
-    type_effect "!...............¡" 0.08
+    type_effect_advanced "!...............¡" 0.08
     echo
-    sleep 2
-    clear
+    sleep 1.5
+    clear 
+    mkdir -p "$CODEX_TEMP_DIR" # Create temp directory early
 }
 
-# --- 3. Setup & Installation Functions ---
-
-# Basic tool check (moved outside spin for earlier checks)
-tr() {
-    # Check if essential tools are installed, install if not
-    for cmd in curl ncurses-utils bc jq; do
-        if ! command -v "$cmd" &>/dev/null; then
-            echo -e " ${A} ${g}Installing essential tool: ${y}$cmd${n}"
-            pkg install "$cmd" -y >/dev/null 2>&1 || { echo -e " ${E} ${r}Failed to install $cmd"; exit 1; }
-        fi
-    done
-}
-
-help() {
+# Main Setup Banner (Improved Aesthetics)
+main_banner() {
     clear
     echo
-    echo -e " ${p}■ \e[4m${g}Use Termux Key Buttons\e[0m ${p}▪︎${n}"
+    echo -e "   ${Y}░█████╗░░█████╗░██████╗░███████╗██╗░░██╗"
+    echo -e "   ${Y}██╔══██╗██╔══██╗██╔══██╗██╔════╝╚██╗██╔╝"
+    echo -e "   ${Y}██║░░╚═╝██║░░██║██║░░██║█████╗░░░╚███╔╝░"
+    echo -e "   ${C}██║░░██╗██║░░██║██║░░██║██╔══╝░░░██╔██╗░"
+    echo -e "   ${C}╚█████╔╝╚█████╔╝██████╔╝███████╗██╔╝╚██╗"
+    echo -e "   ${C}░╚════╝░░╚════╝░╚═════╝░╚══════╝╚═╝░░╚═╝${N}"
+    echo -e "${Y}               +-+-+-+-+-+-+-+-+"
+    echo -e "${C}               ＤＡＲＫ－ＰＲＩＮＣＥ  ايڪـͬــͤــᷜــͨــͣــͪـي"
+    echo -e "${Y}               +-+-+-+-+-+-+-+-+${N}"
     echo
-    echo -e " ${y}Termux Extra Key Buttons${n}"
+    
+    # Dynamic Telegram Link
+    if [ $RANDOM_TG_CHOICE -eq 0 ]; then
+        echo -e "${B}╭════════════════════════⊷"
+        echo -e "${B}┃ ${G} ${SYMBOL_INFO} TG: ${Y}t.me/Termuxcodex"
+        echo -e "${B}╰════════════════════════⊷"
+    else
+        echo -e "${B}╭══════════════════════════⊷"
+        echo -e "${B}┃ ${G} ${SYMBOL_INFO} TG: ${Y}t.me/alphacodex369"
+        echo -e "${B}╰══════════════════════════⊷"
+    fi
+    
     echo
-    echo -e " UP          ${g}↑${n} (Move Selection Up)"
-    echo -e " DOWN        ${g}↓${n} (Move Selection Down)"
+    echo -e "${B}╭══ ${G}〄 ${Y}𝐏𝐑𝐈𝐍𝐂𝐄•°⚠︎︎ ${G}〄"
+    echo -e "${B}┃❁ ${G}ᴄʀᴇᴀᴛᴏʀ: ${Y}ＤＡＲＫ－ＰＲＩＮＣＥ  ايڪـͬــͤــᷜــͨــͣــͪـي"
+    echo -e "${B}┃❁ ${G}ᴅᴇᴠɪᴄᴇ: ${Y}${DEVICE_INFO}"
+    echo -e "${B}╰┈➤ ${G}Status: ${C}$(check_disk_usage)${N}"
     echo
-    echo -e " ${g}Select option: Click ${y}ENTER ${g}button"
-    echo
-    echo -e " ${b}■ \e[4m${c}If you understand, click the Enter Button\e[0m ${b}▪︎${n}"
-    read -p ""
 }
 
-# Advanced Spinner function for installation
-spin() {
-    echo
+# --- 4. INSTALLATION AND SETUP FUNCTIONS ---
+
+# Function for package installation with a modern spinner
+install_spinner() {
+    local package_name=$1
+    local install_cmd=$2
     local delay=0.1
-    local spinner=('◒' '◓' '◑' '◔')
+    local spinner=('◒' '◐' '◓' '◑')
+    local pid
+    
+    # Check if package is already installed (dpkg-l for pkg/apt)
+    if dpkg -l | grep -q "^ii  $package_name " && [[ "$package_name" != "lolcat(pip)" && "$package_name" != "lolcat(gem)" ]]; then
+        echo -e "${SYMBOL_OK} ${Y}$package_name${C} already installed. Skipping.${N}"
+        return 0
+    fi
 
-    show_spinner() {
-        local pid=$!
-        local pkg_name=$1
-        echo -ne "\033[1;96m [+] Installing $pkg_name please wait \e[33m[\033[1;92m"
-        while ps -p $pid > /dev/null; do
-            for i in "${spinner[@]}"; do
-                tput civis # Hide cursor
-                echo -ne "$i\033[1;93m]\033[0m   "
-                sleep $delay
-                printf "\b\b\b\b"
-            done
+    # Run installation command in background
+    (eval "$install_cmd") >/dev/null 2>&1 &
+    pid=$!
+
+    # Spinner logic
+    while kill -0 $pid 2>/dev/null; do
+        for i in "${spinner[@]}"; do
+            tput civis # Hide cursor
+            echo -ne "\r ${SYMBOL_ARROW} Installing ${Y}$package_name${C}... ${G}[${i}]${N}   "
+            sleep $delay
         done
-        tput cnorm # Show cursor
-        printf "   \b\b\b\b\b"
-        printf "\e[1;93m [Done $pkg_name]\e[0m\n"
-        sleep 0.5
-    }
-
-    echo -e " ${A} ${g}Updating package repositories...${n}"
-    apt update -y >/dev/null 2>&1
-    apt upgrade -y >/dev/null 2>&1
+    done
+    tput cnorm # Show cursor
     
-    # Core packages
-    packages=("git" "python" "ncurses-utils" "jq" "figlet" "termux-api" "lsd" "zsh" "ruby" "exa" "neofetch" "htop" "openssh")
+    wait $pid
+    if [ $? -eq 0 ]; then
+        echo -e "\r ${SYMBOL_OK} ${Y}$package_name${C} installed successfully.${N}        "
+    else
+        echo -e "\r ${SYMBOL_ERR} ${R}Failed to install ${Y}$package_name${R}. Check internet/repository.${N} "
+    fi
+}
 
-    for package in "${packages[@]}"; do
-        if ! dpkg -l | grep -q "^ii\s*$package\s"; then
-            pkg install "$package" -y >/dev/null 2>&1 &
-            show_spinner "$package"
-        fi
+# Core dependency installation and check
+install_dependencies() {
+    main_banner
+    echo -e " ${SYMBOL_LINE}"
+    echo -e " ${SYMBOL_INFO} ${G}Performing initial checks and updates...${N}"
+    echo -e " ${SYMBOL_LINE}"
+    
+    # Initial Update/Upgrade (in background for faster spinner start)
+    (apt update -y && apt upgrade -y) >/dev/null 2>&1 &
+    install_spinner "System Update" "wait" # Dummy command to keep spinner running during update
+    
+    # Array of packages and their install commands
+    declare -A packages=(
+        ["curl"]="pkg install curl -y"
+        ["ncurses-utils"]="pkg install ncurses-utils -y"
+        ["git"]="pkg install git -y"
+        ["python"]="pkg install python -y"
+        ["jq"]="pkg install jq -y"
+        ["figlet"]="pkg install figlet -y"
+        ["termux-api"]="pkg install termux-api -y"
+        ["lsd"]="pkg install lsd -y"
+        ["zsh"]="pkg install zsh -y"
+        ["ruby"]="pkg install ruby -y"
+        ["exa"]="pkg install exa -y"
+        ["lolcat(pip)"]="pip install lolcat"
+        ["lolcat(gem)"]="gem install lolcat"
+    )
+
+    for package in "${!packages[@]}"; do
+        install_spinner "$package" "${packages[$package]}"
     done
 
-    # Python lolcat
-    if ! command -v lolcat >/dev/null 2>&1 || ! pip show lolcat >/dev/null 2>&1; then
-        pip install lolcat >/dev/null 2>&1 &
-        show_spinner "lolcat(pip)"
-    fi
-
-    # Zsh configuration
-    if [ ! -d "$HOME/.oh-my-zsh" ]; then
-        git clone https://github.com/ohmyzsh/ohmyzsh.git ~/.oh-my-zsh >/dev/null 2>&1 &
-        show_spinner "oh-my-zsh"
-    fi
-    
-    # Zsh plugins
-    ZSH_PLUGINS_DIR="$HOME/.oh-my-zsh/custom/plugins" # Use custom directory for plugins
-    if [ ! -d "$ZSH_PLUGINS_DIR/zsh-autosuggestions" ]; then
-        git clone https://github.com/zsh-users/zsh-autosuggestions "$ZSH_PLUGINS_DIR/zsh-autosuggestions" >/dev/null 2>&1 &
-        show_spinner "zsh-autosuggestions"
-    fi
-    
-    if [ ! -d "$ZSH_PLUGINS_DIR/zsh-syntax-highlighting" ]; then
-        git clone https://github.com/zsh-users/zsh-syntax-highlighting.git "$ZSH_PLUGINS_DIR/zsh-syntax-highlighting" >/dev/null 2>&1 &
-        show_spinner "zsh-syntax"
-    fi
-    
-    # Ruby lolcat (more features, use both)
-    if ! gem list lolcat | grep -q 'lolcat'; then
-        echo "y" | gem install lolcat > /dev/null 2>&1 &
-        show_spinner "lolcat「Ruby Gem」"
-    fi
-
-    # Final Zsh Shell Change
-    if [ "$SHELL" != "/data/data/com.termux/files/usr/bin/zsh" ]; then
-        chsh -s zsh >/dev/null 2>&1 &
-        show_spinner "zsh-shell-change"
-    fi
-    
-    # Remove default Termux MOTD to replace with our banner
-    rm -rf /data/data/com.termux/files/usr/etc/motd >/dev/null 2>&1
-    
-    # Move custom files (Assuming files/ directory is present in CODEX)
-    mkdir -p "$HOME/.Codex-simu"
-    
-    # Create necessary files/folders for the custom scripts
-    mv "$HOME/CODEX/files/remove" /data/data/com.termux/files/usr/bin/ 2>/dev/null || true
-    chmod +x /data/data/com.termux/files/usr/bin/remove 2>/dev/null || true
-    
-    if [ ! -f "$HOME/.Codex-simu/report" ]; then
-        mv "$HOME/CODEX/files/report" "$HOME/.Codex-simu" 2>/dev/null || true
-        # show_spinner "Codex-report" # Skip spinner for internal file move
-    fi
-    
-    if [ ! -f "/data/data/com.termux/files/usr/bin/chat" ]; then
-        mv "$HOME/CODEX/files/chat.sh" /data/data/com.termux/files/usr/bin/chat 2>/dev/null || true
-        chmod +x /data/data/com.termux/files/usr/bin/chat 2>/dev/null || true
-        # show_spinner "chat" # Skip spinner for internal file move
-    fi
-    
-    # Check for storage permission
-    if [ ! -d "$HOME/storage/shared" ]; then
-        echo -e " ${A} ${g}Requesting Storage Permission...${n}"
-        termux-setup-storage
-    fi
+    echo -e "\n ${SYMBOL_LINE}"
+    echo -e " ${SYMBOL_OK} ${G}All dependencies checked/installed.${N}"
+    echo -e " ${SYMBOL_LINE}\n"
 }
 
-# Configuration of Termux environment and banner files
-setup() {
-    # dx move
-    ds="$HOME/.termux"
-    dx="$ds/font.ttf"
-    simu="$ds/colors.properties"
-    
-    mkdir -p "$ds"
+# ZSH and Oh-My-ZSH Setup
+setup_zsh_ohmyzsh() {
+    main_banner
+    echo -e " ${SYMBOL_LINE}"
+    echo -e " ${SYMBOL_INFO} ${G}Setting up ZSH and Oh My Zsh environment...${N}"
+    echo -e " ${SYMBOL_LINE}"
 
-    # Copy font and color config (if they don't exist)
-    if [ ! -f "$dx" ] && [ -f "$HOME/CODEX/files/font.ttf" ]; then
-        cp "$HOME/CODEX/files/font.ttf" "$ds"
+    # Oh My Zsh Clone
+    if [ ! -d "$HOME_DIR/.oh-my-zsh" ]; then
+        install_spinner "Oh-My-Zsh" "git clone https://github.com/ohmyzsh/ohmyzsh.git $HOME_DIR/.oh-my-zsh"
+    else
+        echo -e "${SYMBOL_OK} ${Y}Oh-My-Zsh${C} directory found. Skipping clone.${N}"
     fi
 
-    if [ ! -f "$simu" ] && [ -f "$HOME/CODEX/files/colors.properties" ]; then
-        cp "$HOME/CODEX/files/colors.properties" "$ds"
+    # Plugins Clone
+    local plugins_dir="$HOME_DIR/.oh-my-zsh/plugins"
+    if [ ! -d "$plugins_dir/zsh-autosuggestions" ]; then
+        install_spinner "zsh-autosuggestions" "git clone https://github.com/zsh-users/zsh-autosuggestions $plugins_dir/zsh-autosuggestions"
+    else
+        echo -e "${SYMBOL_OK} ${Y}zsh-autosuggestions${C} plugin found. Skipping clone.${N}"
+    fi
+
+    if [ ! -d "$plugins_dir/zsh-syntax-highlighting" ]; then
+        install_spinner "zsh-syntax-highlighting" "git clone https://github.com/zsh-users/zsh-syntax-highlighting.git $plugins_dir/zsh-syntax-highlighting"
+    else
+        echo -e "${SYMBOL_OK} ${Y}zsh-syntax-highlighting${C} plugin found. Skipping clone.${N}"
+    fi
+
+    # ZSH Shell Change
+    if [ "$SHELL" != "$PREFIX/bin/zsh" ]; then
+        install_spinner "ZSH Shell Change" "chsh -s $PREFIX/bin/zsh"
+    else
+        echo -e "${SYMBOL_OK} ${Y}ZSH${C} is already the default shell.${N}"
     fi
     
-    # Copy custom FIGlet font
-    if [ -f "$HOME/CODEX/files/ASCII-Shadow.flf" ]; then
-        cp "$HOME/CODEX/files/ASCII-Shadow.flf" "$PREFIX/share/figlet/"
+    # ZSHRC Creation
+    if [ ! -f "$HOME_DIR/.zshrc" ]; then
+        # Use template if .zshrc doesn't exist (temporary for the next step)
+        install_spinner "zshrc file creation" "cp $HOME_DIR/.oh-my-zsh/templates/zshrc.zsh-template $HOME_DIR/.zshrc"
+    else
+        echo -e "${SYMBOL_OK} ${Y}.zshrc${C} found. Will be customized next.${N}"
     fi
     
-    # Copy custom entry script (if applicable)
-    if [ -f "$HOME/CODEX/files/dx-simu.sh" ]; then
-        mkdir -p "/data/data/com.termux/files/usr/bin/"
-        cp "$HOME/CODEX/files/dx-simu.sh" "/data/data/com.termux/files/usr/bin/dx-simu"
-        chmod +x "/data/data/com.termux/files/usr/bin/dx-simu"
+    # Cleanup MOTD
+    if [ -f "$PREFIX/etc/motd" ]; then
+        echo -e "${SYMBOL_INFO} ${C}Cleaning up default MOTD.${N}"
+        rm -f "$PREFIX/etc/motd" >/dev/null 2>&1
     fi
     
-    # Reload Termux settings for font/color changes
-    if command -v termux-reload-settings &>/dev/null; then
-        echo -e " ${A} ${g}Applying Termux theme/font changes...${n}"
-        termux-reload-settings
-    fi
+    echo -e "\n ${SYMBOL_LINE}"
+    echo -e " ${SYMBOL_OK} ${G}ZSH setup complete.${N}"
+    echo -e " ${SYMBOL_LINE}\n"
 }
 
-# Network check loop
-dxnetcheck() {
-    clear
-    echo
-    echo -e "               ${g}╔═══════════════╗"
-    echo -e "               ${g}║ ${n}</>  ${c}CODEX-X${g}  ║"
-    echo -e "               ${g}╚═══════════════╝"
-    echo -e "  ${g}╔════════════════════════════════════════════╗"
-    echo -e "  ${g}║  ${C} ${y}Checking Your Internet Connection¡${g}  ║"
-    echo -e "  ${g}╚════════════════════════════════════════════╝${n}"
-    while true; do
-        curl -s --head --fail https://github.com > /dev/null
-        if [ "$?" != 0 ]; then
-            echo -e "              ${g}╔══════════════════╗"
-            echo -e "              ${g}║${C} ${r}No Internet ${g}║"
-            echo -e "              ${g}╚══════════════════╝"
-            sleep 2.5
-        else
-            break
-        fi
-    done
-    clear
+# Final Termux Configuration and Customization (Colors, Fonts, Banner)
+setup_termux_customization() {
+    main_banner
+    echo -e " ${SYMBOL_LINE}"
+    echo -e " ${SYMBOL_INFO} ${G}Applying Codex theme and customizations...${N}"
+    echo -e " ${SYMBOL_LINE}"
+    
+    # Check if tools directory exists
+    if [ ! -d "$TOOLS_DIR" ]; then
+        echo -e "\n ${SYMBOL_ERR} ${R}Fatal Error: Required files directory (${TOOLS_DIR}) not found.${N}"
+        echo -e " ${R}Please ensure the initial 'CODEX' folder is present and run again.${N}"
+        exit 1
+    fi
+
+    mkdir -p "$TERMUX_DIR"
+
+    # Font and Colors Setup
+    install_spinner "Font and Colors" "cp $TOOLS_DIR/files/font.ttf $TERMUX_DIR/font.ttf && cp $TOOLS_DIR/files/colors.properties $TERMUX_DIR/colors.properties"
+
+    # Figlet Font Setup
+    install_spinner "Figlet Font (ASCII-Shadow)" "cp $TOOLS_DIR/files/ASCII-Shadow.flf $PREFIX/share/figlet/"
+
+    # Utility Commands Setup
+    install_spinner "Utility: remove" "mv $TOOLS_DIR/files/remove $PREFIX/bin/ && chmod +x $PREFIX/bin/remove"
+    install_spinner "Utility: chat" "mv $TOOLS_DIR/files/chat.sh $PREFIX/bin/chat && chmod +x $PREFIX/bin/chat"
+
+    # Codex internal files setup
+    install_spinner "Codex Report File" "mv $TOOLS_DIR/files/report $CODEX_TEMP_DIR/report"
+    install_spinner "Codex Theme Move" "mv $TOOLS_DIR/files/.codex.zsh-theme $HOME_DIR/.oh-my-zsh/themes/"
+    
+    # Reload settings
+    echo -e "${SYMBOL_INFO} ${C}Reloading Termux settings... (Requires Termux-API)${N}"
+    termux-reload-settings 2>/dev/null || echo -e "${SYMBOL_WARN} ${Y}Could not reload settings. Restart Termux manually.${N}"
+    
+    echo -e "\n ${SYMBOL_LINE}"
+    echo -e " ${SYMBOL_OK} ${G}Customization files deployed.${N}"
+    echo -e " ${SYMBOL_LINE}\n"
 }
 
-# User name input and configuration file creation
-donotchange() {
+# Personalized Banner Name Setup
+set_personalized_banner() {
     clear
     echo
     echo
-    echo -e "${c}              (\_/)"
-    echo -e "              (${y}^_^${c})     ${A} ${g}Hey dear${c}"
+    echo -e ""
+    echo -e "${C}              (\_/)"
+    echo -e "              (${Y}^_^${C})     ${SYMBOL_OK} ${G}Hey dear${C}"
     echo -e "             ⊂(___)づ  ⋅˚₊‧ ଳ ‧₊˚ ⋅"
     echo
-    echo -e " ${A} ${c}Please Enter Your ${g}Banner Name${c}"
+    echo -e " ${SYMBOL_ARROW} ${C}Please Enter Your ${G}Banner Name${C}"
     echo
 
     local name
+    local temp_zshrc="$HOME_DIR/temp_zshrc_$$" # Unique temp file name
+    
     # Loop to prompt until valid name (1-8 characters)
     while true; do
-        read -p "[+]──[Enter Your Name (1-8 chars)]────► " name
+        read -rp "[+]──[Enter Your Name (1-8 chars)]────► " name
         echo
 
-        # Validate name length (must be 1-8 characters)
-        if [[ ${#name} -ge 1 && ${#name} -le 8 ]]; then
+        # Input validation
+        if [[ ${#name} -ge 1 && ${#name} -le 8 && "$name" =~ ^[a-zA-Z0-9_-]+$ ]]; then
             break  # Valid, proceed
         else
-            echo -e " ${E} ${r}Name must be between ${g}1 and 8${r} characters. ${y}Please try again.${c}"
+            echo -e " ${SYMBOL_ERR} ${R}Name must be ${G}1-8 characters${R} (A-Z, 0-9, _, - only). ${Y}Please try again.${N}"
             echo
         fi
     done
 
-    # Specify directories and files
-    D1="$HOME/.termux"
-    USERNAME_FILE="$D1/usernames.txt"
-    VERSION="$D1/dx.txt"
-    INPUT_ZSHRC_TEMPLATE="$HOME/CODEX/files/.zshrc"
-    THEME_INPUT="$HOME/CODEX/files/.codex.zsh-theme"
-    OUTPUT_ZSHRC="$HOME/.zshrc"
-    OUTPUT_THEME="$HOME/.oh-my-zsh/themes/codex.zsh-theme"
-    TEMP_ZSHRC="$HOME/temp.zshrc"
+    echo -e "\n ${SYMBOL_INFO} ${C}Applying customization to ZSH configuration...${N}"
 
-    # Ensure template files exist before proceeding
-    if [ ! -f "$INPUT_ZSHRC_TEMPLATE" ] || [ ! -f "$THEME_INPUT" ]; then
-        echo -e " ${E} ${r}Error: Essential configuration templates not found in CODEX/files/."
-        sleep 3
-        return 1
+    # 1. Custom ZSHRC: Replace the placeholder 'PRINCE' with user's name
+    if ! sed "s/PRINCE/$name/g" "$TOOLS_DIR/files/.zshrc" > "$temp_zshrc"; then
+         echo -e " ${SYMBOL_ERR} ${R}ZSHRC processing failed! Aborting.${N}"
+         rm -f "$temp_zshrc"
+         exit 1
     fi
-
-    # 1. Replace SIMU with the name in .zshrc template and save to temporary file
-    sed "s/SIMU/$name/g" "$INPUT_ZSHRC_TEMPLATE" > "$TEMP_ZSHRC" &&
-    # 2. Replace SIMU with the name in the theme file and save to Zsh themes folder
-    sed "s/SIMU/$name/g" "$THEME_INPUT" > "$OUTPUT_THEME" &&
+    mv "$temp_zshrc" "$HOME_DIR/.zshrc"
+    
+    # 2. Custom ZSH Theme: Replace placeholder in the theme file
+    sed -i "s/PRINCE/$name/g" "$HOME_DIR/.oh-my-zsh/themes/codex.zsh-theme"
+    
     # 3. Store the name for future use
-    echo "$name" > "$USERNAME_FILE" &&
-    # 4. Create placeholder files
-    echo "" > "$VERSION" &&
-	echo "" > "$D1/ads.txt"
+    echo "$name" > "$TERMUX_DIR/usernames.txt" 
+    echo "" > "$TERMUX_DIR/dx.txt" # version file (assuming this is intentional)
+	echo "" > "$TERMUX_DIR/ads.txt" # ads file (assuming this is intentional)
 
-    # Check if all operations were successful
-    if [[ $? -eq 0 ]]; then
-        # Move the temporary file to the original output
-        mv "$TEMP_ZSHRC" "$OUTPUT_ZSHRC"
-        
-        clear
-        echo
-        echo
-        echo -e "		        ${g}Hey ${y}$name"
-        echo -e "${c}              (\_/)"
-        echo -e "              (${y}^ω^${c})     ${g}I'm Dx-Simu${c}"
-        echo -e "             ⊂(___)づ  ⋅˚₊‧ ଳ ‧₊˚ ⋅"
-        echo
-        echo -e " ${A} ${c}Your Advanced Banner created ${g}Successfully¡${c}"
-        echo
-        sleep 3
-    else
-        echo
-        echo -e " ${E} ${r}Error occurred while processing the banner files."
-        sleep 1
-        # Clean up temporary file if sed fails
-        rm -f "$TEMP_ZSHRC"
-        return 1
-    fi
 
-    echo
+    # Final success message
     clear
+    echo
+    echo
+    echo -e "		        ${G}Hey ${Y}$name"
+    echo -e "${C}              (\_/)"
+    echo -e "              (${Y}^ω^${C})     ${G}I'm Dx-Simu${C}"
+    echo -e "             ⊂(___)づ  ⋅˚₊‧ ଳ ‧₊˚ ⋅"
+    echo
+    echo -e " ${SYMBOL_OK} ${C}Your Banner and Setup created ${G}Successfully!${C}"
+    echo -e " ${SYMBOL_ARROW} ${G}Configuration complete.${C} Starting new ZSH session.${N}"
+    sleep 3
 }
 
-# Combined installation function
-termux() {
-    spin
-}
+# --- 5. INTERNET AND ENVIRONMENT CHECK ---
 
-# --- 4. Banner Functions ---
-
-# Basic (pre-install) banner
-banner() {
-    echo
-    echo
-    echo -e "   ${y}░█████╗░░█████╗░██████╗░███████╗██╗░░██╗"
-    echo -e "   ${y}██╔══██╗██╔══██╗██╔══██╗██╔════╝╚██╗██╔╝"
-    echo -e "   ${y}██║░░╚═╝██║░░██║██║░░██║█████╗░░░╚███╔╝░"
-    echo -e "   ${c}██║░░██╗██║░░██║██║░░██║██╔══╝░░░██╔██╗░"
-    echo -e "   ${c}╚█████╔╝╚█████╔╝██████╔╝███████╗██╔╝╚██╗"
-    echo -e "   ${c}░╚════╝░░╚════╝░╚═════╝░╚══════╝╚═╝░░╚═╝${n}"
-    echo -e "${y}               +-+-+-+-+-+-+-+-+"
-    echo -e "${c}               |D|S|-|C|O|D|E|X|"
-    echo -e "${y}               +-+-+-+-+-+-+-+-+${n}"
-    echo
-    if [ $random_number -eq 0 ]; then
-        echo -e "${b}╭════════════════════════⊷"
-        echo -e "${b}┃ ${g}[${n}ム${g}] ᴛɢ: ${y}t.me/Termuxcodex"
-        echo -e "${b}╰════════════════════════⊷"
-    else
-        echo -e "${b}╭══════════════════════════⊷"
-        echo -e "${b}┃ ${g}[${n}ム${g}] ᴛɢ: ${y}t.me/alphacodex369"
-        echo -e "${b}╰══════════════════════════⊷"
-    fi
-    echo
-    echo -e "${b}╭══ ${g}〄 ${y}ᴄᴏᴅᴇx ${g}〄"
-    echo -e "${b}┃❁ ${g}ᴄʀᴇᴀᴛᴏʀ: ${y}ᴅx-ᴄᴏᴅᴇx"
-    echo -e "${b}┃❁ ${g}ᴅᴇᴠɪᴄᴇ: ${y}${VENDOR} ${MODEL}"
-    echo -e "${b}╰┈➤ ${g}Hey ${y}Dear"
-    echo
-}
-
-# Menu banner (less info than the main banner)
-banner2() {
-    echo
-    echo
-    echo -e "   ${y}░█████╗░░█████╗░██████╗░███████╗██╗░░██╗"
-    echo -e "   ${y}██╔══██╗██╔══██╗██╔══██╗██╔════╝╚██╗██╔╝"
-    echo -e "   ${y}██║░░╚═╝██║░░██║██║░░██║█████╗░░░╚███╔╝░"
-    echo -e "   ${c}██║░░██╗██║░░██║██║░░██║██╔══╝░░░██╔██╗░"
-    echo -e "   ${c}╚█████╔╝╚█████╔╝██████╔╝███████╗██╔╝╚██╗"
-    echo -e "   ${c}░╚════╝░░╚════╝░╚═════╝░╚══════╝╚═╝░░╚═╝${n}"
-    echo -e "${y}               +-+-+-+-+-+-+-+-+"
-    echo -e "${c}               |D|S|-|C|O|D|E|X|"
-    echo -e "${y}               +-+-+-+-+-+-+-+-+${n}"
-    echo
-    if [ $random_number -eq 0 ]; then
-        echo -e "${b}╭════════════════════════⊷"
-        echo -e "${b}┃ ${g}[${n}ム${g}] ᴛɢ: ${y}t.me/Termuxcodex"
-        echo -e "${b}╰════════════════════════⊷"
-    else
-        echo -e "${b}╭══════════════════════════⊷"
-        echo -e "${b}┃ ${g}[${n}ム${g}] ᴛɢ: ${y}t.me/alphacodex369"
-        echo -e "${b}╰══════════════════════════⊷"
-    fi
-    echo
-    echo -e "${b}╭══ ${g}〄 ${y}ᴄᴏᴅᴇx ${g}〄"
-    echo -e "${b}┃❁ ${g}ᴄʀᴇᴀᴛᴏʀ: ${y}ᴅx-ᴄᴏᴅᴇx"
-    echo -e "${b}╰┈➤ ${g}Hey ${y}Dear"
-    echo
-    echo -e "${c}╭════════════════════════════════════════════════⊷"
-    echo -e "${c}┃ ${p}❏ ${g}Choose what you want to use. then Click Enter${n}"
-    echo -e "${c}╰════════════════════════════════════════════════⊷"
-}
-
-# --- 5. Main Execution Logic ---
-
-setupx() {
-    # Check if we are running on Termux
-    if [ -d "/data/data/com.termux/files/usr/" ]; then
-        tr # Install initial required tools
-        dxnetcheck # Check network
-        
-        banner
-        echo -e " ${C} ${y}Detected Termux on Android¡"
-        echo -e " ${lm}"
-        echo -e " ${A} ${g}Updating and Installing Advanced Packages...¡"
-        echo -e " ${dm}"
-        echo -e " ${A} ${g}Wait a few minutes.${n}"
-        echo -e " ${lm}"
-        termux # Run full installation
-        
-        # dx check if CODEX folder exists after initial installation steps
-        if [ -d "$HOME/CODEX" ]; then
-            sleep 2
-            clear
-            banner
-            echo -e " ${A} ${p}Advanced Setup Completed...!¡"
-            echo -e " ${dm}"
-            
-            clear
-            banner
-            echo -e " ${C} ${c}Configuring Your Termux Environment...${n}"
-            echo
-            echo -e " ${A} ${g}Wait a few moments.${n}"
-            
-            setup # Copy config files (fonts, colors, etc.)
-            donotchange # Get username and configure Zsh files
-            
-            # Final message
-            clear
-            banner
-            get_dynamic_info # Show advanced system info
-            echo -e " ${g}[${n}${PKGS}${g}] ${y}Status: ${g}Advanced Installation Complete!${n}"
-            echo -e " ${C} ${c}Type ${g}exit ${c} or restart Termux to load your new ${y}Zsh Banner¡¡ ${g}[${n}${HOMES}${g}]${n}"
-            echo
-            sleep 3
-            cd "$HOME"
-            rm -rf "$HOME/CODEX" 2>/dev/null
-            exit 0
-        else
-            clear
-            banner
-            echo -e " ${E} ${r}Tools Source Folder (CODEX) Not Found After Install!"
-            echo
-            sleep 3
-            exit
+# Robust Internet Check
+dxnetcheck() {
+    clear
+    main_banner
+    echo -e "  ${G}╔════════════════════════════════════════════╗"
+    echo -e "  ${G}║  ${SYMBOL_INFO} ${Y}Checking Your Internet Connection...${G} ║"
+    echo -e "  ${G}╚════════════════════════════════════════════╝${N}"
+    
+    # Ensure curl is available for checking
+    if ! command -v curl &>/dev/null; then
+        echo -e " ${SYMBOL_WARN} ${Y}Curl not found. Attempting to install for network check.${N}"
+        pkg install curl -y >/dev/null 2>&1
+        if [ $? -ne 0 ]; then
+             echo -e " ${SYMBOL_ERR} ${R}Cannot install Curl. Network check aborted.${N}"
+             # Proceed anyway, but warn
         fi
-    else
-        clear
-        banner
-        echo -e " ${E} ${r}Sorry, this operating system is not supported ${p}| ${g}[${n}${HOST}${g}] ${SHELL}${n}"
-        echo
-        echo -e " ${A} ${g} Waiting for the next update using Linux...!¡"
-        echo
-        sleep 3
-        exit
     fi
+
+    # Loop until network is available (or ctrl+c)
+    while true; do
+        if curl --silent --head --fail https://github.com > /dev/null; then
+            echo -e " ${SYMBOL_OK} ${G}Internet connection is UP.${N}"
+            sleep 1
+            break
+        else
+            echo -e "              ${G}╔══════════════════╗"
+            echo -e "              ${G}║${SYMBOL_ERR} ${R}No Internet ${G}║"
+            echo -e "              ${G}╚══════════════════╝"
+            echo -e " ${SYMBOL_INFO} ${C}Please connect to the internet to proceed.${N}"
+            sleep 3
+        fi
+    done
+    clear
 }
 
+# Core Setup Logic
+core_setup_logic() {
+    # 1. Environment Check
+    if [ ! -d "/data/data/com.termux/files/usr/" ]; then
+        clear
+        echo -e "\n ${SYMBOL_ERR} ${R}Sorry, this operating system is not supported.${N}"
+        echo -e " ${SYMBOL_INFO} ${C}This script is designed for Termux on Android only.${N}"
+        echo -e " ${SYMBOL_INFO} ${G}Wait for the next update using Linux...!${N}"
+        sleep 4
+        exit 1
+    fi
+    
+    # 2. Check for required initial files
+    if [ ! -d "$TOOLS_DIR" ]; then
+        clear
+        main_banner
+        echo -e "\n ${SYMBOL_ERR} ${R}Tools Directory (${TOOLS_DIR}) Not Found.${N}"
+        echo -e " ${SYMBOL_INFO} ${C}Please ensure the setup is run from the correct initial path.${N}"
+        sleep 4
+        exit 1
+    fi
 
-# --- 6. Interactive Menu ---
-start # Initial welcome animation
+    # 3. Network Check
+    dxnetcheck
+    
+    # 4. Installation Steps
+    install_dependencies
+    setup_zsh_ohmyzsh
+    setup_termux_customization
+    set_personalized_banner
 
-options=("Free Usage (Advanced Setup)" "Premium")
-selected=0
-display_menu() {
+    # 5. Final Exit
     clear
-    banner2
+    main_banner
+    echo -e " ${SYMBOL_OK} ${G}SETUP COMPLETE!${N}"
+    echo -e " ${SYMBOL_ARROW} ${C}Type ${G}exit${C} (or restart Termux) to launch your new environment.${N}"
+    echo -e " ${SYMBOL_INFO} ${C}Cleaning up initial setup folder...${N}"
+    
+    # Final cleanup
+    rm -rf "$TOOLS_DIR" >/dev/null 2>&1
+    
+    sleep 4
+    exit 0 # Exit successfully after cleanup
+}
+
+# --- 6. USER INTERFACE (MENU) ---
+
+# Menu options for the user
+declare -a options=("Free Usage (Install and Setup)" "Premium (Contact Creator)")
+selected=0
+
+# Function to display the main choice menu
+display_main_menu() {
+    clear
+    main_banner
+    echo -e "${C}╭════════════════════════════════════════════════⊷"
+    echo -e "${C}┃ ${P}❏ ${G}Choose your option, then click Enter.${N}"
+    echo -e "${C}╰════════════════════════════════════════════════⊷"
     echo
-    echo -e " ${g}■ \e[4m${p}Select An Option\e[0m ${g}▪︎${n}"
-    echo
+    
+    # Display options
     for i in "${!options[@]}"; do
         if [ $i -eq $selected ]; then
-            echo -e " ${g}〄> ${c}${options[$i]} ${g}<〄${n}"
+            echo -e " ${G}〄> ${C}${options[$i]} ${G}<〄${N}"
         else
             echo -e "     ${options[$i]}"
         fi
     done
+    echo
 }
 
-# Main loop
-while true; do
-    display_menu
-    read -rsn1 input # Reads a single character, no echo
-    if [[ "$input" == $'\e' ]]; then
-        # Arrow key detected (starts with ESC)
-        read -rsn2 -t 0.1 input # Read the next two characters
-        case "$input" in
-            '[A') # Up arrow
-                ((selected--))
-                if [ $selected -lt 0 ]; then
-                    selected=$((${#options[@]} - 1))
-                fi
-                ;;
-            '[B') # Down arrow
-                ((selected++))
-                if [ $selected -ge ${#options[@]} ]; then
-                    selected=0
-                fi
-                ;;
-            *)
-                # Handle other escape sequences
-                ;;
-        esac
-    elif [[ "$input" == "" ]]; then # Enter key
-        case ${options[$selected]} in
-            "Free Usage (Advanced Setup)")
-                echo -e "\n ${g}[${n}${HOMES}${g}] ${c}Continuing with Advanced Free Setup..!${n}"
-                sleep 1
-                setupx
-                ;;
-            "Premium")
-                echo -e "\n ${g}[${n}${HOST}${g}] ${c}Opening Telegram for Premium Access..!${n}"
-                sleep 1
-                xdg-open "https://t.me/Codexownerbot"
-                cd "$HOME"
-                rm -rf "$HOME/CODEX" 2>/dev/null
-                exit 0
-                ;;
-        esac
-    fi
-done
+# Main menu loop to handle user interaction
+main_menu_loop() {
+    while true; do
+        display_main_menu
+        read -rsn1 input # Read single, silent character
+        
+        # Check for escape sequences (arrow keys)
+        if [[ "$input" == $'\e' ]]; then
+            read -rsn2 -t 0.1 input
+            case "$input" in
+                '[A') # Up arrow
+                    ((selected--))
+                    if [ $selected -lt 0 ]; then
+                        selected=$((${#options[@]} - 1))
+                    fi
+                    ;;
+                '[B') # Down arrow
+                    ((selected++))
+                    if [ $selected -ge ${#options[@]} ]; then
+                        selected=0
+                    fi
+                    ;;
+            esac
+        
+        # Check for Enter key
+        elif [[ "$input" == "" ]]; then 
+            case ${options[$selected]} in
+                "Free Usage (Install and Setup)")
+                    echo -e "\n ${SYMB
