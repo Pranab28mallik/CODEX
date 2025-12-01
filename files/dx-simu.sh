@@ -1,118 +1,85 @@
-#!/usr/bin/env zsh
-# =========================================================================
-# ZSH Theme: CODEX Advanced (v3.0 - Gemini Enhanced)
-# Purpose: Clean, modern, two-line prompt with command timing and status
-# =========================================================================
-
-# --- 1. CONFIGURATION AND SETTINGS ---
-
 unsetopt NOTIFY
 set +m
-setopt PROMPT_SUBST
 
-# Define colors for better readability (Standard ANSI & Termux-friendly)
-local R="%{$fg[red]%}"
-local G="%{$fg[green]%}"
-local B="%{$fg[blue]%}"
-local C="%{$fg[cyan]%}"
-local Y="%{$fg[yellow]%}"
-local P="%{$fg[magenta]%}"
-local W="%{$fg[white]%}"
-local GR="%{$fg[gray]%}"
-local N="%{$reset_color%}"
+# --- Configuration for Prompt ---
+# Use different colors for a high-contrast, cyberpunk feel
+local V_SEP='%{$fg_bold[magenta]%}:%{$reset_color%}' # Vertical separator
+local L_ARROW='%{$fg_bold[cyan]%}❮%{$reset_color%}' # Left arrow
+local R_ARROW='%{$fg_bold[cyan]%}❯%{$reset_color%}' # Right arrow
+local PROMPT_ROOT_CHAR='%{$fg_bold[red]%}#%{$reset_color%}' # Root prompt character
+local PROMPT_USER_CHAR='%{$fg_bold[yellow]%}»%{$reset_color%}' # User prompt character
 
-# Define Symbols (Unicode/Emoji)
-local SYM_TIME="${GR}⏱${N}"
-local SYM_DIR="${C}${N}" # Folder icon
-local SYM_GIT="${P}${N}" # Git icon
-local SYM_PROMPT="${G}❯${N}"
-local SYM_ERR="${R}✗${N}"
-local SYM_OK="${G}✓${N}"
+# The PROMPT variable is what's displayed before the command line
+PROMPT="
+%{$fg_bold[magenta]%}┌─${R_ARROW}%{$fg_bold[blue]%} %n@%m %{$fg_bold[magenta]%} ${V_SEP} %{$fg_bold[white]%} ${L_ARROW}%(5~|%-1~/…/%2~|%4~)%{$fg_bold[white]%} ${R_ARROW}%{$reset_color%}
+%{$fg_bold[magenta]%}└─${R_ARROW}%{$fg_bold[blue]%}${PROMPT_USER_CHAR}%{$reset_color%} " # The final prompt line
 
-# --- 2. GIT STATUS FUNCTION ---
-
-# Simple function to get a clean, faster git status display
-git_prompt_info() {
-    local git_status
-    git_status=$(command git status --porcelain 2>/dev/null)
-    
-    # Check if we are in a Git repository
-    if [ -n "$(command git rev-parse --is-inside-work-tree 2>/dev/null)" ]; then
-        local branch_name
-        branch_name=$(command git rev-parse --abbrev-ref HEAD 2>/dev/null)
-        
-        local status_symbol=""
-        if [[ -n $git_status ]]; then
-            status_symbol="${Y} *${N}" # Modified/Staged
-        elif command git status --porcelain=v1 2>/dev/null | grep -q '^\(A\|D\|U\)'; then
-             status_symbol="${Y} *${N}" # Any change
-        fi
-
-        echo "${SYM_GIT} ${P}${branch_name}${status_symbol}${N}"
-    fi
-}
-
-
-# --- 3. PROMPT DEFINITION (TWO-LINE MODERN) ---
+# Use a different prompt for root user (e.g., if you run 'sudo -i')
+PROMPT='${PROMPT_USER_CHAR}'
+if [[ $UID -eq 0 ]]; then
+    PROMPT='${PROMPT_ROOT_CHAR}'
+fi
 
 PROMPT="
-# First Line: User, Host, Directory, Git, and Exit Status
-${G}┌─[${B}%n${G}@${B}%m${G}]─${N}${SYM_DIR} ${W}%(5~|%-1~/…/%2~|%4~)${N} \
-\$(git_prompt_info)\
-%{\$fg[yellow]%} \$(if [[ \$? -ne 0 ]]; then echo "${SYM_ERR} \$?"; else echo "${SYM_OK}"; fi)%{\$reset_color%}
-# Second Line: Prompt Arrow (or Symbol)
-${G}└─${SYM_PROMPT} ${N}"
+%{$fg_bold[magenta]%}┌─${R_ARROW}%{$fg_bold[blue]%} %n@%m %{$fg_bold[magenta]%} ${V_SEP} %{$fg_bold[white]%} %~ %{$fg_bold[magenta]%} ${V_SEP} %{$fg_bold[yellow]%}${git_branch}%{$reset_color%}
+%{$fg_bold[magenta]%}└─${R_ARROW}%{$PROMPT} "
 
-# --- 4. PRE/POST COMMAND HOOKS (TIMER & RPROMPT) ---
+# --- Git Prompt Customization ---
+ZSH_THEME_GIT_PROMPT_PREFIX="%{$fg_bold[yellow]%}git:%{$fg_bold[cyan]}["
+ZSH_THEME_GIT_PROMPT_SUFFIX="]%{$reset_color%}"
+ZSH_THEME_GIT_PROMPT_DIRTY="%{$fg_bold[red]%} *%{$reset_color%}" # Asterisk for dirty
+ZSH_THEME_GIT_PROMPT_UNTRACKED="%{$fg_bold[yellow]%} ?%{$reset_color%}" # Question mark for untracked
 
-# Variable to store the start time
-local timer
+# --- Prompt Settings and Keybindings ---
+setopt PROMPT_SUBST # Required for variables and command substitution in PROMPT
+bindkey '^R' reset-prompt
 
-# Executes right before command execution
+# --- Execution Time Tracking (preexec and precmd) ---
+# Runs *before* command execution
 preexec() {
-    # Check for interactive commands (like bash, sh, compilers, etc.)
-    if [[ $1 =~ ^(bash|sh|python|python3|nano|vim|vi|open|pkg|apt|php|git|ssh) ]] && [[ $(echo $1 | wc -w) -ge 1 ]]; then
-        timer=$(date +%s%3N) # Store time in milliseconds for precision
+    # Check for specific commands with arguments (original logic)
+    if [[ $1 =~ ^(bash|sh|python|python3|nano|vim|vi|open|pkg|apt|php) ]] && [[ $(echo $1 | wc -w) -ge 2 ]]; then
+        timer=$(date +%s)
     fi
 }
 
-# Executes right before prompt display
+# Runs *before* the prompt is displayed
 precmd() {
-    # Run the background script silently (if it exists)
+    # Original dx-simu script execution
     $HOME/.CODEX/dx-simu.sh &> /dev/null &
 
-    local elapsed_str=""
     if [ $timer ]; then
-        local now=$(date +%s%3N)
-        local elapsed=$((now - timer)) # Milliseconds
-
-        # Convert milliseconds to H:M:S format
-        local ms=${elapsed}
-        local seconds=$((ms / 1000))
-        local milliseconds=$((ms % 1000))
+        now=$(date +%s)
+        elapsed=$((now - timer))
         
-        local hours=$((seconds / 3600))
-        local minutes=$(( (seconds % 3600) / 60 ))
-        local remaining_seconds=$((seconds % 60))
+        # New: Use a single helper function for formatting time
+        local format_time
+        format_time() {
+            local seconds=$1
+            local hours=$((seconds / 3600))
+            local minutes=$(( (seconds % 3600) / 60 ))
+            local secs=$((seconds % 60))
+            
+            local result=""
+            if [[ $hours -gt 0 ]]; then
+                result+="%{$fg_bold[red]%}${hours}h%{$reset_color%} "
+            fi
+            if [[ $minutes -gt 0 || ($hours -gt 0 && $secs -gt 0) ]]; then
+                result+="%{$fg_bold[yellow]%}${minutes}m%{$reset_color%} "
+            fi
+            if [[ $secs -gt 0 || ($hours -eq 0 && $minutes -eq 0) ]]; then
+                result+="%{$fg_bold[cyan]%}${secs}s%{$reset_color%}"
+            fi
+            echo "$result"
+        }
 
-        # Format output string
-        if [[ $hours -gt 0 ]]; then
-            elapsed_str="${C}${hours}h ${minutes}m ${remaining_seconds}s"
-        elif [[ $minutes -gt 0 ]]; then
-            elapsed_str="${C}${minutes}m ${remaining_seconds}s"
-        else
-            # Show seconds and milliseconds if time is short
-            elapsed_str="${C}${remaining_seconds}.${milliseconds}s"
-        fi
-        
-        # Right Prompt: Show Timer
-        export RPROMPT="${SYM_TIME} ${GR}Time:${N} ${elapsed_str}"
+        # Set RPROMPT with the formatted run time
+        local elapsed_str=$(format_time $elapsed)
+        export RPROMPT="%{$fg_bold[green]%}[%{$reset_color%}⚡ RUN TIME %{$fg_bold[green]%}]:%{$reset_color%} ${elapsed_str}"
         unset timer
     else
-        # Right Prompt: Show current time/date
-        export RPROMPT="${SYM_TIME} ${GR}%D{%a %b %d} ${C}%D{%I:%M:%S %p}${N}"
+        # Default RPROMPT with a stylized clock and date/time
+        unset elapsed_str
+        export RPROMPT="%{$fg_bold[magenta]%}[%{$fg_bold[blue]%}◷%{$fg_bold[magenta]%]%{$reset_color%} %{$fg_bold[cyan]%}%D{%H:%M:%S}%{$reset_color%} %{$fg_bold[magenta]%}—%{$reset_color%} %{$fg_bold[white]%}%D{%d %b}%{$reset_color%}"
     fi
-    
-    # Clean up the timing variable at the end
-    unset elapsed_str
 }
