@@ -1,159 +1,70 @@
 #!/data/data/com.termux/files/usr/bin/bash
+# =========================================================================
+# CODEX Background Updater & Cacher
+# Purpose: Fetches server messages (updates/ads) and caches them locally.
+# Designed to be run periodically (e.g., via Termux-API Cron or similar).
+# =========================================================================
 
-# --- Configuration ---
-# Termux path setup is usually done automatically, but we keep it for strictness.
-export PATH="/data/data/com.termux/files/usr/bin:$PATH"
-
-# Base URL for the remote server
+# --- CONFIGURATION ---
 CODEX_URL="https://codex-server-pied.vercel.app"
-
-# Directory and file paths
 TERMUX_DIR="$HOME/.termux"
+
+# Cache Files
 VERSION_FILE="$TERMUX_DIR/dx.txt"
 ADS_FILE="$TERMUX_DIR/ads.txt"
-LOG_FILE="$TERMUX_DIR/update_check.log"
 TIMESTAMP_FILE="$TERMUX_DIR/.last_update_check"
 
-# Time interval for checking updates (in seconds, 5 minutes)
+# Check interval in seconds (5 minutes)
 CHECK_INTERVAL_SECONDS=300
 
-# Required command-line tools
-REQUIRED_TOOLS=("curl" "jq" "date" "stat")
+# Error output
+ERR_LOG="$TERMUX_DIR/updater_error.log"
 
-# --- Utility Functions ---
+# --- CORE LOGIC ---
 
-# Function to log messages
-log() {
-    local severity="$1" # INFO, WARN, ERROR
-    local message="$2"
-    local timestamp=$(date "+%Y-%m-%d %H:%M:%S")
-    echo "[$timestamp] [$severity] $message" >> "$LOG_FILE"
-}
+# 1. Ensure the Termux directory exists
+mkdir -p "$TERMUX_DIR" 2>/dev/null
 
-# Function to check for required dependencies
-check_dependencies() {
-    log "INFO" "Checking required dependencies..."
-    for tool in "${REQUIRED_TOOLS[@]}"; do
-        if ! command -v "$tool" &> /dev/null; then
-            log "ERROR" "Dependency '$tool' not found. Please install it (e.g., 'pkg install $tool')."
-            echo "Error: Required tool '$tool' not found. Exiting." >&2
-            exit 1
-        fi
-    done
-    log "INFO" "All dependencies found."
-}
-
-# Function to check if the time interval has elapsed
-is_check_due() {
-    mkdir -p "$TERMUX_DIR"
+# 2. Check last update timestamp to throttle requests
+if [[ -f "$TIMESTAMP_FILE" ]]; then
     
-    # Check if the timestamp file exists and is readable
-    if [[ -f "$TIMESTAMP_FILE" ]]; then
-        # Use a robust way to get last modification time (handling both GNU stat and BSD stat on Termux)
-        local last_check=$(stat -c %Y "$TIMESTAMP_FILE" 2>/dev/null || stat -f %m "$TIMESTAMP_FILE" 2>/dev/null)
-        local now=$(date +%s)
-        
-        if [[ -z "$last_check" ]]; then
-            log "WARN" "Could not determine last check time from timestamp file. Proceeding with check."
-            return 0 # Time check failed, proceed anyway
-        fi
+    # Use the portable approach for getting last modification time (seconds since epoch)
+    local last_check
+    last_check=$(stat -c %Y "$TIMESTAMP_FILE" 2>/dev/null || stat -f %m "$TIMESTAMP_FILE" 2>/dev/null)
+    local now=$(date +%s)
+    local time_diff=$((now - last_check))
 
-        local time_diff=$((now - last_check))
-
-        if (( time_diff < CHECK_INTERVAL_SECONDS )); then
-            log "INFO" "Check interval ($CHECK_INTERVAL_SECONDS s) not elapsed. Skipping check (Time elapsed: $time_diff s)."
-            return 1 # Not due
-        fi
-        log "INFO" "Check due. Time elapsed: $time_diff s."
-        return 0 # Due
-    else
-        log "INFO" "Timestamp file not found. Performing initial check."
-        return 0 # Due (initial run)
+    if (( time_diff < CHECK_INTERVAL_SECONDS )); then
+        # Exit silently if the interval hasn't passed
+        exit 0
     fi
-}
+fi
 
-# Function to fetch and update version message
-fetch_and_update_version() {
-    log "INFO" "Attempting to fetch version message from $CODEX_URL/check_version..."
-    local temp_version_file
-    
-    # Use mktemp for atomic file writing
-    temp_version_file=$(mktemp)
+# Update the timestamp immediately before fetching data
+touch "$TIMESTAMP_FILE"
 
-    if ! curl -fsS "$CODEX_URL/check_version" | jq -r '.[0].message // empty' > "$temp_version_file"; then
-        log "ERROR" "Failed to fetch or parse version data. curl/jq error code: $?"
-        rm -f "$temp_version_file"
-        return 1
-    fi
+# 3. Fetch Version/Update Message
+local update_message
+if ! update_message=$(curl -fsS "$CODEX_URL/check_version" 2>/dev/null | jq -r '.[0].message // empty'); then
+    echo "$(date): Error fetching or parsing version data." >> "$ERR_LOG"
+    # If fetch failed, we leave the old content and continue, but log the error.
+    update_message="" 
+fi
 
-    # Check if the extracted content is non-empty before updating
-    if [[ -s "$temp_version_file" ]]; then
-        mv "$temp_version_file" "$VERSION_FILE"
-        log "INFO" "Successfully updated version message in $VERSION_FILE."
-    else
-        echo "" > "$VERSION_FILE"
-        log "WARN" "Fetched version message was empty. Cleared $VERSION_FILE."
-    fi
-    
-    rm -f "$temp_version_file" 2>/dev/null
-    return 0
-}
+# Save the message to the version file
+echo "$update_message" > "$VERSION_FILE"
 
-# Function to fetch and update advertisements
-fetch_and_update_ads() {
-    log "INFO" "Attempting to fetch ads from $CODEX_URL/ads..."
-    local temp_ads_file
-    
-    # Use mktemp for atomic file writing
-    temp_ads_file=$(mktemp)
+# 4. Fetch Advertisements
+local ads_output
+if ! ads_output=$(curl -fsS "$CODEX_URL/ads" 2>/dev/null | jq -r '.[] | .message'); then
+    echo "$(date): Error fetching or parsing ads data." >> "$ERR_LOG"
+    # If fetch failed, we leave the old content and continue, but log the error.
+    ads_output=""
+fi
 
-    # Use printf for better handling of multi-line output from jq
-    if ! curl -fsS "$CODEX_URL/ads" | jq -r '.[] | .message' | sed -E '/^\s*$/d' > "$temp_ads_file"; then
-        log "ERROR" "Failed to fetch or parse ads data. curl/jq error code: $?"
-        rm -f "$temp_ads_file"
-        return 1
-    fi
+# Save ads to the ads file
+echo "$ads_output" > "$ADS_FILE"
 
-    # Check if the extracted content is non-empty before updating
-    if [[ -s "$temp_ads_file" ]]; then
-        mv "$temp_ads_file" "$ADS_FILE"
-        log "INFO" "Successfully updated ads message in $ADS_FILE."
-    else
-        echo "" > "$ADS_FILE"
-        log "INFO" "Fetched ads message was empty or not applicable. Cleared $ADS_FILE."
-    fi
-
-    rm -f "$temp_ads_file" 2>/dev/null
-    return 0
-}
-
-# --- Main Execution ---
-
-main() {
-    # 1. Dependency Check
-    check_dependencies
-    
-    # 2. Check if the run is due
-    if ! is_check_due; then
-        exit 0 # Exit quietly if not due
-    fi
-    
-    log "INFO" "Starting Termux update and ads check."
-    
-    # 3. Perform file checks and updates
-    
-    # Create the timestamp file immediately before starting the check cycle
-    # This prevents parallel execution even if the script fails later
-    touch "$TIMESTAMP_FILE"
-    
-    # Run fetch operations
-    fetch_and_update_version
-    fetch_and_update_ads
-    
-    log "INFO" "Check cycle completed."
-    exit 0
-}
-
-# Execute the main function
-main
+# 5. Clean exit
+exit 0
 
