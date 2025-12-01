@@ -1,350 +1,321 @@
-#!/bin/bash
-# Advanced Codex Chat Client - Enhanced by DX-SIMU
+#!/data/data/com.termux/files/usr/bin/bash
+# =========================================================================
+# Script: CODEX Advanced Anonymous Chat Tool
+# Author: DARK-X (Original Script)
+# Modified: Gemini AI (For better UX, robustness, and structure)
+# Purpose: Interactive Termux client for an anonymous chat API.
+# Dependencies: curl, jq (installed if not present)
+# =========================================================================
 
-# --- Setup and Dependency Check ---
-clear
-# Check for essential tools: curl for API calls, jq for JSON parsing
-for cmd in curl jq; do
-    if ! command -v "$cmd" &> /dev/null; then
-        echo " ${r}ERROR: ${y}$cmd${r} is not installed. Installing now...${n}"
-        pkg install "$cmd" -y &> /dev/null
-        if ! command -v "$cmd" &> /dev/null; then
-            echo " ${E} ${r}FATAL: Failed to install $cmd. Cannot continue.${n}"
-            exit 1
+# --- 1. CONFIGURATION AND STYLES ---
+
+# Termux Paths and API URL
+API_URL="https://codex-chat-hew1.onrender.com"
+USERNAME_DIR="$HOME/.CODEX"
+USERNAME_FILE="$USERNAME_DIR/usernames.txt"
+
+# Colors and Styling
+R='\033[1;91m' # Red (Error/Warning)
+P='\033[1;95m' # Purple
+Y='\033[1;93m' # Yellow
+G='\033[1;92m' # Green (Success)
+N='\033[0m'    # Reset
+B='\033[1;94m' # Blue
+C='\033[1;96m' # Cyan (Info)
+
+# Symbols
+SYMBOL_INFO="${C}[${N}i${C}]${G}"
+SYMBOL_WARN="${Y}[${N}!${Y}]${R}"
+SYMBOL_ERR="${R}[${N}✗${R}]${R}"
+SYMBOL_ARROW="${G}[${N}»${G}]${C}"
+SYMBOL_CHAT="${G}[${N}</>${G}]${C}"
+SYMBOL_USER="${Y}[${N}@${Y}]${C}"
+
+# Random choice for exit animation (for variety)
+RANDOM_EXIT_STYLE=$(( RANDOM % 2 ))
+
+# Ensure JQ is installed for JSON parsing
+install_jq() {
+    if ! command -v jq &> /dev/null; then
+        echo -e "${SYMBOL_INFO} ${C}Installing 'jq' for JSON parsing...${N}"
+        pkg install jq -y &> /dev/null
+        if [ $? -ne 0 ]; then
+             echo -e "${SYMBOL_ERR} ${R}Failed to install 'jq'. JSON parsing may fail.${N}"
         fi
     fi
-done
-clear
-
-# --- Color and Symbol Definitions ---
-r='\033[1;91m' # Red
-p='\033[1;95m' # Purple
-y='\033[1;93m' # Yellow
-g='\033[1;92m' # Green
-n='\033[0m'    # No Color (Reset)
-b='\033[1;94m' # Blue
-c='\033[1;96m' # Cyan
-
-# dx Symbol (Nerd Font dependent icons are recommended for full display)
-E='\033[1;92m[\033[1;00m×\033[1;92m]\033[1;91m'
-A='\033[1;92m[\033[1;00m+\033[1;92m]\033[1;92m'
-C='\033[1;92m[\033[1;00m</>\033[1;92m]\033[92m'
-lm='\033[1;96m▱▱▱▱▱▱\033[0m〄\033[1;96m▱▱▱▱▱▱\033[0m'
-dm='\033[1;93m▱▱▱▱▱▱\033[0m〄\033[1;93m▱▱▱▱▱▱\033[0m'
-
-# --- Global Configuration ---
-URL="https://codex-chat-hew1.onrender.com"
-USERNAME_DIR="$HOME/.DARK"
-USERNAME_FILE="$USERNAME_DIR/usernames.txt"
-random_number=$(( RANDOM % 2 )) # Used for random exit animation choice
-local username # To be set after loading/saving
-
-# --- Utility Functions ---
-
-# Function for simple, fast loading animation
-load() {
-    clear
-    echo -e " ${r}●${n}"
-    sleep 0.1
-    clear
-    echo -e " ${r}●${y}●${n}"
-    sleep 0.1
-    clear
-    echo -e " ${r}●${y}●${b}●${n}"
-    sleep 0.1
-    clear
 }
 
-# Function to safely retrieve and parse JSON data from the API
-fetch_json_data() {
-    local endpoint=$1
-    local json
+# --- 2. CORE UTILITY FUNCTIONS ---
 
-    # Use curl --fail and capture exit code
-    json=$(curl -s --fail "$URL/$endpoint" 2>/dev/null)
-
-    if [ $? -ne 0 ]; then
-        echo -e " ${E} ${r}API Error: Failed to connect to $URL/$endpoint.${n}"
-        return 1
-    fi
-
-    # Check if the response is valid JSON (using jq)
-    if ! echo "$json" | jq . >/dev/null 2>&1; then
-        echo -e " ${E} ${r}API Error: Received invalid JSON from $URL/$endpoint.${n}"
-        return 1
-    fi
-    echo "$json"
+# Loading animation (Slightly enhanced)
+loading_animation() {
+    local delay=0.1
+    for i in 1 2 3; do
+        clear
+        case $i in
+            1) echo -e " ${R}●${N}";;
+            2) echo -e " ${R}●${Y}●${N}";;
+            3) echo -e " ${R}●${Y}●${B}●${N}";;
+        esac
+        sleep $delay
+    done
 }
 
-# Advanced internet check with better display
-inter() {
+# Internet connectivity check (Robust and user-friendly)
+check_internet() {
     clear
-    echo
-    echo -e "               ${g}╔═══════════════╗"
-    echo -e "               ${g}║ ${n}</>  ${c}DARK-X${g}   ║"
-    echo -e "               ${g}╚═══════════════╝"
-    echo -e "  ${g}╔════════════════════════════════════════════╗"
-    echo -e "  ${g}║  ${C} ${y}Checking Advanced Network Connectivity¡${g} ║"
-    echo -e "  ${g}╚════════════════════════════════════════════╝${n}"
+    echo -e "\n               ${G}╔═══════════════╗"
+    echo -e "               ${G}║ ${SYMBOL_CHAT} ${C}DARK-X${G}   ║"
+    echo -e "               ${G}╚═══════════════╝"
+    echo -e "  ${G}╔════════════════════════════════════════════╗"
+    echo -e "  ${G}║  ${SYMBOL_INFO} ${Y}Checking Your Internet Connection...${G} ║"
+    echo -e "  ${G}╚════════════════════════════════════════════╝${N}"
+    
+    local attempts=0
+    local max_attempts=10
+    
     while true; do
-        # Check against a known reliable external site
-        curl -s --head --fail https://google.com > /dev/null
-        if [ "$?" != 0 ]; then
-            echo -e "              ${g}╔══════════════════╗"
-            echo -e "              ${g}║${C} ${r}No Internet ${g}║"
-            echo -e "              ${g}╚══════════════════╝"
-            sleep 2.5
+        curl --silent --head --fail https://google.com > /dev/null
+        if [ "$?" -eq 0 ]; then
+            echo -e "\n              ${G}╔══════════════════╗"
+            echo -e "              ${G}║${SYMBOL_INFO} ${G}Internet UP ${G}║"
+            echo -e "              ${G}╚══════════════════╝${N}"
+            sleep 1
+            break
+        else
+            if [ $attempts -ge $max_attempts ]; then
+                 clear
+                 echo -e "\n ${SYMBOL_ERR} ${R}Failed to connect after $max_attempts attempts.${N}"
+                 echo -e " ${SYMBOL_INFO} ${C}Please check your connection and restart.${N}"
+                 exit 1
+            fi
+            echo -e "\n              ${G}╔══════════════════╗"
+            echo -e "              ${G}║${SYMBOL_ERR} ${R}No Internet ${G}║"
+            echo -e "              ${G}╚══════════════════╝${N}"
+            attempts=$((attempts + 1))
+            sleep 3
+        fi
+    done
+    clear
+}
+
+# Exit Animation 1 (Cat style - 'broken')
+broken_exit() {
+    local frames=(
+        "=( ´ ${G}•⁠${P}ω${G}• ⁠${C})=   ˖<💌>."
+        "=( ´ ${G}•⁠${P}ω${G}• ⁠${C})=   𖥔˖<💘>.𖥔"
+        "=( ´ ${G}•⁠${P}ω${G}• ⁠${C})=   .𖥔 ˖<💘>.𖥔 ݁"
+        "=( ´ ${G}•⁠${P}ω${G}• ⁠${C})=   𖥔 ݁ ˖<💛>.𖥔 ݁ "
+        "=( ´ ${G}•⁠${P}ω${G}• ⁠${C})=   .𖥔 ݁ ˖<💗>.𖥔 ݁ ˖"
+        "=( ´ ${G}•⁠${P}ω${G}• ⁠${C})=   ₊ଳ ‧₊˚ ⋅.𖥔 ݁ ˖<💔>.𖥔 ݁ ˖⋅˚₊‧ ଳ₊"
+    )
+    for frame in "${frames[@]}"; do
+        clear
+        echo -e "${C}\n        _(\___/)\n      ${frame}\n      // ͡     )︵)\n     (⁠人_____づ_づ"
+        sleep 0.4
+    done
+    echo -e "\n ${SYMBOL_CHAT} ${G}Goodbye! ${Y}(${C}-${R}.${C}-${Y})${C}Zzz・・・・𑁍ࠬܓ${N}\n"
+    exit 0
+}
+
+# Exit Animation 2 (Wave style - 'goodbye')
+waving_exit() {
+    local frames=(
+        "╱|、\n                      (${B}˚${P}ˎ ${B}。${C}7\n                       |、~〵\n                       じしˍ,)⼃"
+        "╱|、\n                      (${B}˚${P}ˎ ${B}。${C}7\n                       |、~〵\n                       じしˍ,)ノ"
+    )
+    for i in {1..6}; do
+        clear
+        frame_idx=$((i % 2))
+        echo -e "${C}\n     ࿔‧ ֶָ֢˚˖𐦍˖˚ֶָ֢ ‧࿔       ${frames[frame_idx]}"
+        sleep 0.4
+    done
+    echo -e "\n ${SYMBOL_CHAT} ${G}Goodbye! ${Y}(${C}-${R}.${C}-${Y})${C}Zzz・・・・ཐི|ཋྀ${N}\n"
+    exit 0
+}
+
+# Function to run the selected exit animation
+perform_exit() {
+    echo -e "\n ${SYMBOL_ERR} ${R}Exiting Chat Tool...${N}\n"
+    sleep 0.5
+    if [ $RANDOM_EXIT_STYLE -eq 0 ]; then
+        waving_exit
+    else
+        broken_exit
+    fi
+}
+
+# --- 3. CHAT LOGIC FUNCTIONS ---
+
+# Check for warnings specific to the current user
+check_warnings() {
+    local current_warnings
+    # Fetch warnings, filter by username, and extract the warning message
+    current_warnings=$(curl -s "$API_URL/warnings" | jq -r --arg user "$username" '.[] | select(.username == $user) | "⚠️ Warning: \(.warning)"' 2>/dev/null)
+    
+    if [ -n "$current_warnings" ]; then
+        # Display warning prominently above the chat window
+        echo -e "\n ${SYMBOL_WARN} ${R}SERVER ALERT FOR $username!${N}"
+        echo -e " ${R}========================================${N}"
+        echo -e " ${R}$current_warnings${N}"
+        echo -e " ${R}========================================${N}\n"
+    fi
+}
+
+# Check for ban status and exit if banned
+check_ban_status() {
+    local banned_message
+    loading_animation
+    
+    # Fetch ban status, filter by username, and extract the ban message
+    banned_message=$(curl -s "$API_URL/ban" | jq -r --arg user "$username" '.[] | select(.username == $user) | .bn_mesg' 2>/dev/null)
+    
+    if [ -n "$banned_message" ]; then
+     clear
+echo -e "\n     ${C}____    __    ____  _  _     _  _ "
+echo -e "    ${C}(  _ \  /__\  (  _ \( )/ )___( \/ )"
+echo -e "    ${Y} )(_) )/(__)\  )   / )  ((___))  ("
+echo -e "   ${Y} (____/(__)(__)(_)\_)(_)\_)   (_/\_)\n"
+        echo -e "         ${SYMBOL_ERR} ${R}YOU ARE BANNED, $username!${N}"
+        echo -e "         ${R}Reason: $banned_message${N}"
+        echo
+        exit 0
+    fi
+}
+
+
+# Main Chat Interface and Messaging Loop
+display_messages() {
+    check_ban_status # Check ban status before entering the loop
+    
+    while true; do
+        clear
+        loading_animation
+        
+        # --- Display Banner and Warnings ---
+        
+        # Date and Time Display
+        local current_date=$(date +"${C}%Y-%b-%d${N}")
+        local current_time=$(date +"${C}%I:%M %p${N}")
+        echo -e "${lm}"
+        echo -e " $current_date"
+        echo -e "  ${C}┏┓┓┏┏┓┏┳┓"
+        echo -e "  ${C}┃ ┣┫┣┫ ┃               ${SYMBOL_CHAT} ${G}t.me/Codex_369"
+        echo -e "  ${C}┗┛┛┗┛┗ ┻"
+        echo -e "  $current_time"
+        echo -e "${lm}"
+
+        check_warnings # Display dynamic warnings if present
+        
+        echo -e "\n ${C}╭${lm} ${C}MESSAGES ${C}${lm}╮"
+
+        # --- Fetch and Display Messages (Robust JSON parsing) ---
+        
+        # Fetch, parse, and format messages
+        local chat_log
+        chat_log=$(curl -s "$API_URL/messages" | jq -r '.[] | "\(.username): \(.message)"' 2>/dev/null)
+        
+        if [ $? -eq 0 ] && [ -n "$chat_log" ]; then
+            echo -e "${G}$chat_log${N}"
+        else
+            echo -e " ${SYMBOL_ERR} ${R}Could not load messages. API error or network issue.${N}"
+        fi
+        
+        echo -e " ${C}╰${dm} ${C}ADS/INFO ${C}${dm}╯"
+        
+        # Fetch and display ads
+        local ads_info
+        ads_info=$(curl -s "$API_URL/ads" | jq -r '.[]' 2>/dev/null)
+        if [ $? -eq 0 ] && [ -n "$ads_info" ]; then
+            echo -e "${Y}$ads_info${N}\n"
+        else
+            echo -e " ${SYMBOL_INFO} ${C}No ads currently available.${N}\n"
+        fi
+
+        # --- User Input ---
+        
+        read -rp "${SYMBOL_ARROW} ${Y}Enter Message${N} | ${SYMBOL_USER}${username}${N} (Type ${R}q${N} to Exit) ──➤ " message
+        
+        if [[ "$message" == "q" ]]; then
+            perform_exit
+        elif [[ -z "$message" ]]; then
+            # Ignore empty messages
+            continue
+        else
+            # Send the message (Username padded with ' 〄 ' for style on server)
+            curl -s -X POST -H "Content-Type: application/json" -d "{\"username\":\" 〄 $username\", \"message\":\"$message\"}" "$API_URL/send" &> /dev/null
+            
+            # Add a small delay for server processing and API refresh
+            sleep 1.5
+        fi
+    done
+}
+
+# --- 4. USER REGISTRATION (Slightly improved validation) ---
+
+# Function to handle username input and saving
+save_username() {
+    clear
+    loading_animation
+echo -e "\n        ${C}____    __    ____  _  _     _  _ "
+echo -e "       ${C}(  _ \  /__\  (  _ \( )/ )___( \/ )"
+echo -e "       ${Y} )(_) )/(__)\  )   / )  ((___))  ("
+echo -e "      ${Y} (____/(__)(__)(_)\_)(_)\_)   (_/\_)\n\n"
+    
+    echo -e " ${SYMBOL_ARROW} ${C}Enter Your Anonymous ${G}Username${C}"
+    echo
+    
+    local new_username
+    while true; do
+        read -rp "[+]──[Enter Your Username (3-12 chars)]────► " new_username
+        
+        if [[ -z "$new_username" ]]; then
+            echo -e "${SYMBOL_ERR} ${R}Username cannot be empty!${N}"
+        elif [[ ${#new_username} -lt 3 || ${#new_username} -gt 12 ]]; then
+             echo -e "${SYMBOL_ERR} ${R}Username must be between 3 and 12 characters!${N}"
+        elif ! [[ "$new_username" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+            echo -e "${SYMBOL_ERR} ${R}Only letters, numbers, hyphens, and underscores are allowed!${N}"
         else
             break
         fi
     done
-    clear
-}
 
-# Function to check and display user warnings
-check_warnings() {
-    local json
-    json=$(fetch_json_data "warnings")
-
-    if [ $? -ne 0 ]; then
-        echo -e " ${E} ${r}Warning check failed (API error).${n}"
-        return 1
-    fi
-
-    local warning
-    # Format the warning with a Unicode emoji (Nerd Font compatible)
-    warning=$(echo "$json" | jq -r --arg user "$username" '.[] | select(.username == $user) | "⚠️  WARNING: ${r}\(.username)${n} has been warned: ${y}\(.warning)${n}"' 2>/dev/null)
-
-    if [ -n "$warning" ]; then
-        echo -e "${lm}"
-        echo -e " ${r}$warning${n}"
-        echo -e "${dm}"
-    fi
-}
-
-# Function to check for user ban before entering the chat loop
-check_ban() {
-    local json
-    json=$(fetch_json_data "ban")
-
-    if [ $? -ne 0 ]; then
-        echo -e " ${E} ${r}Ban check failed (API error). Proceeding with caution.${n}"
-        return 0
-    fi
-
-    local banned_msg
-    # Filter the ban message for the current user
-    banned_msg=$(echo "$json" | jq -r --arg user "$username" '.[] | select(.username == $user) | "🚨 ACCESS DENIED: \(.bn_mesg)"' 2>/dev/null)
-
-    if [ -n "$banned_msg" ]; then
-        load
-        echo -e "     ${c}____    __    ____  _  _     _  _ "
-        echo -e "    ${c}(  _ \  /__\  (  _ \( )/ )___( \/ )"
-        echo -e "    ${y} )(_) )/(__)\  )   / )  ((___))  ("
-        echo -e "   ${y} (____/(__)(__)(_)\_)(_)\_)   (_/\_)\n"
-        echo -e "         ${r}${banned_msg}${n}"
-        echo
-        sleep 5
-        exit 1
-    fi
-}
-
-# Animated Exit Sequence 1: Heartbreak (broken)
-broken() {
-    local hearts=('˖<💌>' '𖥔˖<💘>.𖥔' '.𖥔 ˖<💘>.𖥔 ݁' '𖥔 ݁ ˖<💛>.𖥔 ݁' '.𖥔 ݁ ˖<💗>.𖥔 ݁ ˖' '₊ଳ ‧₊˚ ⋅.𖥔 ݁ ˖<💔>.𖥔 ݁ ˖⋅˚₊‧ ଳ₊')
-    clear
-    for heart in "${hearts[@]}"; do
-        clear
-        echo
-        echo -e "${c}        _(\___/)"
-        echo -e "      =( ´ ${g}•⁠${p}ω${g}• ⁠${c})=   ${heart}"
-        echo -e "      // ͡     )︵)"
-        echo -e "     (⁠人_____づ_づ"
-        echo
-        sleep 0.3
-    done
-    echo -e " ${C} ${g}Goodbye! ${y}(${c}-${r}.${c}-${y})${c}Zzz・・・・𑁍ࠬܓ"
-    echo
-    exit 0
-}
-
-# Animated Exit Sequence 2: Cat (goodbye)
-goodbye() {
-    local paws=('⼃' 'ノ')
-    clear
-    for i in {1..6}; do
-        local paw_idx=$(( i % 2 ))
-        clear
-        echo
-        echo -e "${c}     ࿔‧ ֶָ֢˚˖𐦍˖˚ֶָ֢ ‧࿔       ╱|、"
-        echo -e "                      (${b}˚${p}ˎ ${b}。${c}7"
-        echo -e "                       |、~〵"
-        echo -e "                       じしˍ,)${paws[$paw_idx]}"
-        echo
-        sleep 0.3
-    done
-    echo -e " ${C} ${g}Goodbye! ${y}(${c}-${r}.${c}-${y})${c}Zzz・・・・ཐི|ཋྀ"
-    echo
-    exit 0
-}
-
-# Function to set up exit handler
-exit_handler() {
-    if [ $random_number -eq 0 ]; then
-        goodbye
-    else
-        broken
-    fi
-}
-
-# Set the trap to run the animated exit handler on script exit (including Ctrl+C/SIGINT)
-trap exit_handler EXIT SIGINT
-
-# Usage instructions before chat loop starts
-dx() {
-    clear
-    echo
-    echo -e " ${p}■ \e[4m${g}CHAT USAGE GUIDE\e[0m ${p}▪︎${n}"
-    echo
-    echo -e " ${y}Enter your message in the prompt below.${n}"
-    echo
-    echo -e " To exit the tool, type ${g}q ${y}and press Enter.${n}"
-    echo -e "             q"
-    echo
-    echo -e " ${b}■ \e[4m${c}If you understand, click the Enter Button\e[0m ${b}▪︎${n}"
-    read -p ""
-}
-
-# Main Chat Display Loop
-display_messages() {
-    # Check ban before starting the loop (trap will handle the exit)
-    check_ban
-    dx # Show usage instructions
-
-    while true; do
-        clear
-        echo -e " ${r}●${y}●${b}●${n}"
-        check_warnings
-
-        # --- Header ---
-        D=$(date +"${c}%Y-%b-%d${n}")
-        T=$(date +"${c}%I:%M:%S %p${n}")
-        echo -e "${lm}"
-        echo -e " $D | $T ${A} ${g}SERVER: ${URL}"
-        echo -e "  ${c}┏┓┓┏┏┓┏┳┓"
-        echo -e "  ${c}┃ ┣┫┣┫ ┃               ${C} ${g}t.me/Pranabmallik"
-        echo -e "  ${c}┗┛┛┗┛┗ ┻"
-        echo -e "${lm}"
-        echo -e " ${A} ${y}Recent Messages:${n}"
-        echo -e "${dm}"
-
-        # Fetch and display messages
-        local msg_json
-        msg_json=$(fetch_json_data "messages")
-
-        if [ $? -ne 0 ]; then
-            echo -e " ${E} ${r}Failed to load messages from the server.${n}"
-        else
-            # Advanced Formatting: Time, User, Message
-            # Uses Unicode clock \u23F1
-            echo "$msg_json" | jq -r '.[] | "\u23F1 ${c}\(.timestamp)${n} ${p}<${y}\(.username)${p}>: ${g}\(.message)${n}"'
-        fi
-
-        echo -e "${dm}"
-
-        # Fetch and display ads
-        local ads_json
-        ads_json=$(fetch_json_data "ads")
-        echo -e " ${A} ${c}Announcements/Ads:${n}"
-
-        if [ $? -ne 0 ]; then
-            echo -e " ${E} ${r}Failed to load ads.${n}"
-        else
-            # Formats ads with a blue diamond emoji \u274f
-            echo "$ads_json" | jq -r '.[] | "  \u274f ${b}\(.)"'
-        fi
-        echo -e "${dm}"
-
-        # --- Input Prompt ---
-        read -p "${A}─[Send Message | ${y}${username}${n}]──➤ " message
-        
-        if [[ "$message" == "q" ]]; then
-            echo -e "\n ${E} ${r}Exiting..Tool..!\n"
-            exit 0 # Trigger the exit handler
-        elif [[ -n "$message" ]]; then
-            # Simple client-side timestamp added to the message payload
-            local client_time=$(date "+%H:%M:%S")
-            # POST message to the server, formatted with a gear \u269b
-            curl -s -X POST -H "Content-Type: application/json" -d "{\"username\":\"\u269b ${username}\", \"message\":\"$message \u23F1 $client_time\"}" "$URL/send" &> /dev/null &
-        fi
-        
-        # Add a short delay to prevent thrashing the server
-        sleep 0.5
-    done
-}
-
-# Function to manage username setup
-save_username() {
-    clear
-    load
-    echo -e "        ${c}____    __    ____  _  _     _  _ "
-    echo -e "       ${c}(  _ \  /__\  (  _ \( )/ )___( \/ )"
-    echo -e "       ${y} )(_) )/(__)\  )   / )  ((___))  ("
-    echo -e "      ${y} (____/(__)(__)(_)\_)(_)\_)   (_/\_)\n\n"
-    echo -e " ${A} ${c}Enter Your Anonymous ${g}Username${c}"
-    echo
+    # Save the username
+    mkdir -p "$USERNAME_DIR"
+    echo "$new_username" > "$USERNAME_FILE"
     
-    local new_username
-    read -p "[+]──[Enter Your Username]────► " new_username
-
-    # Validate username
-    if [[ -z "$new_username" ]]; then
-        echo -e "${r}Username cannot be empty! Retrying.${n}"
-        sleep 1
-        save_username
-        return
-    fi
-
+    clear
+    echo
+    echo -e "		        ${G}Hey ${Y}$new_username"
+    echo -e "${C}              (\_/)"
+    echo -e "              (${Y}^ω^${C})     ${G}I'm Dx-Simu${C}"
+    echo -e "             ⊂(___)づ  ⋅˚₊‧ ଳ ‧₊˚ ⋅"
+    echo
+    echo -e " ${SYMBOL_OK} ${C}Your account created ${G}Successfully!${C}"
+    echo
+    sleep 1
+    echo -e " ${SYMBOL_INFO} ${C}Enjoy Our Chat Tool!${N}"
+    echo
+    read -rp "[+]──[Press ENTER to start chat]────► "
+    
     # Set the global username variable
     username="$new_username"
     
-    sleep 1
-    clear
-    echo
-    echo -e "		        ${g}Hey ${y}$username"
-    echo -e "${c}              (\_/)"
-    echo -e "              (${y}^ω^${c})     ${g}I'm ＤＡＲＫ－ＰＲＩＮＣＥ  ايڪـͬــͤــᷜــͨــͣــͪـي${c}"
-    echo -e "             ⊂(___)づ  ⋅˚₊‧ ଳ ‧₊˚ ⋅"
-    echo
-    echo -e " ${A} ${c}DARK Your Account Created ${g}Successfully¡${c}"
-    
-    # Save the username
-    echo "$username" > "$USERNAME_FILE"
-    echo
-    sleep 1
-    echo -e " ${A} ${c}Enjoy Our Chat Tool¡"
-    echo
-    read -p "[+]──[Enter to continue]────► "
+    # Skip 'dx' help screen and go straight to chat loop
+    display_messages
 }
 
-# --- Main Execution ---
+# --- 5. INITIAL EXECUTION FLOW ---
 
-# 1. Ensure username directory exists
-mkdir -p "$USERNAME_DIR"
+# 1. Install JQ if necessary (for reliable JSON parsing)
+install_jq
 
-# 2. Load or Save Username
+# 2. Check and load/save username
 if [ -f "$USERNAME_FILE" ]; then
     username=$(cat "$USERNAME_FILE")
-    # Basic check to ensure it's not empty
-    if [ -z "$username" ]; then
-        save_username
-    fi
+    # 3. Check internet connection and start chat
+    check_internet
+    display_messages
 else
     save_username
 fi
-
-# 3. Check internet connection
-inter
-
-# 4. Start displaying messages
-display_messages
