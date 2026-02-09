@@ -1,6 +1,30 @@
+# Define the Termux configuration directory
 ds="$HOME/.termux"
+
+# Path to the bash.bashrc file
 pp="$ds/bash.bashrc"
+
+# Path to the colors.properties file
 simu="$ds/colors.properties"
-rm -rf "$simu"
-cp "$pp" $PREFIX/etc/
+
+# Safely remove the existing colors.properties if it exists
+if [ -e "$simu" ]; then
+    echo "Removing existing colors.properties..."
+    rm -rf "$simu"
+else
+    echo "No existing colors.properties found. Skipping removal."
+fi
+
+# Copy the bash.bashrc to the Termux etc directory with safety check
+if [ -f "$pp" ]; then
+    echo "Copying bash.bashrc to $PREFIX/etc/..."
+    cp "$pp" "$PREFIX/etc/"
+else
+    echo "Error: $pp not found. Please check the path."
+    exit 1
+fi
+
+# Reload Termux settings to apply changes
 termux-reload-settings
+
+echo "Termux configuration has been updated and reloaded successfully."
