@@ -1,44 +1,65 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
+# Set PATH to ensure script uses Termux's bin directory
 export PATH="/data/data/com.termux/files/usr/bin:$PATH"
 
+# Configuration Variables
 CODEX_URL="https://codex-server-pied.vercel.app"
-termux_dir="$HOME/.termux"
-version_file="$termux_dir/dx.txt"
-ads_file="$termux_dir/ads.txt"
-timestamp_file="$termux_dir/.last_update_check"
+TERMUX_DIR="$HOME/.termux"
+VERSION_FILE="$TERMUX_DIR/dx.txt"
+ADS_FILE="$TERMUX_DIR/ads.txt"
+TIMESTAMP_FILE="$TERMUX_DIR/.last_update_check"
+CHECK_INTERVAL_SECONDS=300  # 5 minutes
 
-check_interval_seconds=300 
+# Create the Termux directory if it doesn't exist
+mkdir -p "$TERMUX_DIR"
 
-mkdir -p "$termux_dir"
+# Check if last update check was recent enough
+if [[ -f "$TIMESTAMP_FILE" ]]; then
+    # Get the last modification time of the timestamp file
+    if command -v stat &>/dev/null; then
+        # Compatible with GNU and BSD
+        if stat -c %Y "$TIMESTAMP_FILE" &>/dev/null; then
+            last_check=$(stat -c %Y "$TIMESTAMP_FILE")
+        elif stat -f %m "$TIMESTAMP_FILE" &>/dev/null; then
+            last_check=$(stat -f %m "$TIMESTAMP_FILE")
+        else
+            last_check=$(date +%s)
+        fi
+    else
+        last_check=$(date +%s)
+    fi
 
-if [[ -f "$timestamp_file" ]]; then
-    
-    local last_check=$(stat -c %Y "$timestamp_file" 2>/dev/null || stat -f %m "$timestamp_file" 2>/dev/null)
-    local now=$(date +%s)
-    local time_diff=$((now - last_check))
+    now=$(date +%s)
+    time_diff=$((now - last_check))
 
-    if (( time_diff < check_interval_seconds )); then
+    # Exit if checked recently
+    if (( time_diff < CHECK_INTERVAL_SECONDS )); then
         exit 0
     fi
 fi
 
-touch "$timestamp_file" 
+# Update the timestamp to current time
+touch "$TIMESTAMP_FILE"
 
+# Fetch version message from server
 update_message=$(curl -fsS "$CODEX_URL/check_version" | jq -r '.[0].message // empty')
 
+# Save the message or clear the version file
 if [[ -n "$update_message" ]]; then
-    echo "$update_message" > "$version_file"
+    echo "$update_message" > "$VERSION_FILE"
 else
-    echo "" > "$version_file"
+    echo "" > "$VERSION_FILE"
 fi
 
+# Fetch ads message from server
 ads_output=$(curl -fsS "$CODEX_URL/ads" | jq -r '.[] | .message')
 
+# Save the ads message or clear the ads file
 if [[ -n "$ads_output" ]]; then
-    echo "$ads_output" > "$ads_file"
+    echo "$ads_output" > "$ADS_FILE"
 else
-    echo "" > "$ads_file"
+    echo "" > "$ADS_FILE"
 fi
 
 exit 0
